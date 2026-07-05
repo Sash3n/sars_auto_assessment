@@ -43,6 +43,39 @@ The app runs at http://localhost:3000.
 
 ## Current state
 
+Phase 2 (multi-source income model) is complete:
+
+- Data model in `src/lib/model/`: payslips with an `employer` field and no cap on
+  entries per year (mid-year job changes are first-class), named allowance and
+  fringe benefit lists, employer retirement and medical fringe benefits captured
+  as their own line items, PAYE, UIF, and non-tax deductions tracked for the
+  user's records but excluded from tax. Unlimited rental properties with expense
+  apportionment, freelance income as a repeatable list, local interest and
+  dividends, capital disposals with per-disposal primary residence exclusion, and
+  a full dependents model (relationship, date of birth, disability, months of
+  medical scheme cover), not just a headcount.
+- SARS source code registry in `src/lib/sars-codes.ts`, and aggregation in
+  `src/lib/model/aggregate.ts` that maps payroll fields to code totals (3601,
+  3605, 3713, 3801, 3805, 3817) ready for the Phase 4 assessment composer.
+- Input validation and sanitisation at the model boundary for every
+  user-supplied value (`src/lib/model/validate.ts`): currency parsing and
+  clamping, label sanitisation, ISO date and month checks.
+- Client store (`src/lib/store/`): pure reducer, versioned localStorage
+  persistence (`sars-app-data-v1`), multi-year data keyed by tax year with an
+  active-year switcher in the shell sidebar.
+- Capture UI: app shell with sidebar navigation, and pages for employment
+  income (payslip list and form), other income (rentals, freelance, interest,
+  dividends, disposals), and deductions and household (taxpayer details,
+  medical costs, retirement, donations, home office, dependents).
+
+How it is tested: 145 tests. Unit suites cover aggregation (including more than
+12 payslips across employers, rental apportionment and losses, the primary
+residence exclusion), validation edge cases, formatting, the reducer (including
+immutability and year switching), and storage corruption recovery. Component
+suites drive the real forms with Testing Library user events: adding payslips
+with named allowances, rentals with expenses, freelance items, disposals,
+dependents, and the year switcher.
+
 Phase 1 (core tax engine) is complete:
 
 - Versioned tax year tables in `src/lib/tax-engine/tax-tables/`, one config file

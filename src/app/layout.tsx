@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
+import AppShell from "@/components/AppShell";
+import { StoreProvider } from "@/lib/store/StoreProvider";
 import { THEME_STORAGE_KEY } from "@/lib/theme";
 import "./globals.css";
 
@@ -43,7 +45,9 @@ export default function RootLayout({
       <body
         className={`${inter.variable} ${jetbrainsMono.variable} font-sans antialiased bg-base-200 text-base-content min-h-dvh`}
       >
-        {children}
+        <StoreProvider>
+          <AppShell>{children}</AppShell>
+        </StoreProvider>
       </body>
     </html>
   );

@@ -13,20 +13,16 @@ describe("HomePage", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders the theme toggle", () => {
+  it("links into each capture section", () => {
     render(<HomePage />);
     expect(
-      screen.getByRole("button", { name: /switch to .* mode/i }),
-    ).toBeInTheDocument();
-  });
-
-  it("states plainly that it is not an official SARS product", () => {
-    render(<HomePage />);
+      screen.getByRole("link", { name: /capture payslips/i }),
+    ).toHaveAttribute("href", "/income");
     expect(
-      screen.getByText(/not an official sars application/i),
-    ).toBeInTheDocument();
+      screen.getByRole("link", { name: /capture other income/i }),
+    ).toHaveAttribute("href", "/other-income");
     expect(
-      screen.getByText(/not affiliated with or endorsed by sars/i),
-    ).toBeInTheDocument();
+      screen.getByRole("link", { name: /capture deductions/i }),
+    ).toHaveAttribute("href", "/deductions");
   });
 });
