@@ -43,6 +43,31 @@ The app runs at http://localhost:3000.
 
 ## Current state
 
+Phase 7 (design polish and accessibility) is complete:
+
+- Layout parity with the design reference: exact 280px sidebar, 1280px
+  max-width content container, and on mobile the sidebar's key summary views
+  (Home, Income, Results, Compare) become a bottom-tab bar, with the full
+  navigation still available in the drawer.
+- Both themes were built from the design reference from Phase 0 onward, and
+  every component uses semantic theme tokens, so light/dark parity holds
+  across every screen including charts (whose palettes are separately
+  validated per mode).
+- Accessibility pass: a skip-to-content link targeting the main landmark,
+  keyboard operability for the drawer toggle (Enter and Space), Escape
+  closing the consent modal with focus moved into it on open, focus-visible
+  styled as the reference's 2px primary ring, aria-current on active
+  navigation, labeled icon-only controls throughout, chart figures with
+  roles, printed labels, and table fallbacks, and reduced-motion support via
+  `prefers-reduced-motion`.
+
+How it is tested: shell tests cover the skip link and main landmark wiring,
+the mobile quick navigation contents, keyboard activation of the drawer
+toggle, scoped navigation queries, and the year switcher. An upload page
+accessibility test asserts the consent modal takes focus on open and closes
+on Escape. The full suite (247 tests) passes in both structure and coverage
+thresholds.
+
 Phase 6 (dashboard and analytics) is complete:
 
 - The home page becomes a dashboard once income is captured: the estimated
