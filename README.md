@@ -43,6 +43,37 @@ The app runs at http://localhost:3000.
 
 ## Current state
 
+Phase 4 (assessment engine and SARS comparison) is complete:
+
+- Assessment composer (`src/lib/tax-engine/assessment.ts`): composes every
+  captured source into the ITA34 structure: income by SARS code (3601, 3605,
+  3713, 3801, 3805, 3817, 4201 with the exemption as a negative adjustment
+  line), deductions allowed (4029 with carry-forward warnings, donations, home
+  office), taxable income, assessed tax after rebates (including s6A and s6B
+  medical credits), tax credits and adjustments (PAYE), assessment result, and
+  the SARS rating percentage. Sign convention matches SARS: positive is
+  payable by the taxpayer. Provisional taxpayer likelihood is flagged when
+  non-PAYE income exceeds the threshold.
+- ITA34 parser (`src/lib/extraction/ita34.ts`): reads coded lines and summary
+  rows from pasted ITA34 text, treating trailing minus as negative. Unread
+  figures stay absent, never zero.
+- Comparison (`src/lib/tax-engine/compare.ts`): line-by-line diff by SARS code
+  plus the summary rows, with a configurable mismatch threshold. SARS-side
+  figures that could not be read show as "not available" and can be completed
+  manually; codes SARS assessed that we did not calculate are surfaced too.
+- Results page: the estimated assessment in ITA34 form with a refund/owed
+  verdict (green for refund, red for owed, matching SARS's own sign
+  convention). Compare page: paste the ITA34, see the diff, fill in anything
+  the parser could not read.
+
+How it is tested: the composer, parser, and comparison were written test-first
+(failing suite committed before implementation). A full hand-computed 2025/26
+reference scenario pins every intermediate figure (payroll code totals,
+interest exemption, retirement limit, taxable income 497 600, tax 116 763,
+credits, result 15 840), plus refund, empty-year, missing-date-of-birth,
+carry-forward, and CGT scenarios. Component tests drive both pages, including
+the manual completion of a not-available SARS value flipping a row to match.
+
 Phase 3 (extraction pipeline) is complete:
 
 - Local-first extraction (`src/lib/extraction/`): PDF text-layer reading via
