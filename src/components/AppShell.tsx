@@ -78,6 +78,28 @@ export const NAV_ITEMS: NavItem[] = [
       </svg>
     ),
   },
+  {
+    href: "/results",
+    label: "Results",
+    icon: (
+      <svg {...iconProps} aria-hidden="true">
+        <rect x="4" y="3" width="16" height="18" rx="2" />
+        <path d="M8 7h8m-8 4h8m-8 4h4" />
+      </svg>
+    ),
+  },
+  {
+    href: "/compare",
+    label: "Compare",
+    icon: (
+      <svg {...iconProps} aria-hidden="true">
+        <path d="M8 3 4 7l4 4" />
+        <path d="M4 7h16" />
+        <path d="m16 21 4-4-4-4" />
+        <path d="M20 17H4" />
+      </svg>
+    ),
+  },
 ];
 
 function YearSelect() {
