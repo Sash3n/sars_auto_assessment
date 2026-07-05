@@ -192,11 +192,11 @@ Phase 3 (extraction pipeline) is complete:
   low-confidence rows start unchecked.
 - Cloud LLM fallback, strictly opt-in per instance: a consent modal states
   exactly what will be sent (the extracted text) and to which provider
-  (`api.anthropic.com`), the request goes directly from the browser to the
-  Anthropic API with the user's own key (bring-your-own-key, stored locally
-  only, never in any cloud data), and structured outputs constrain the model
-  response to a fixed JSON schema. Invalid model values are dropped, not
-  trusted.
+  (`generativelanguage.googleapis.com`), the request goes directly from the
+  browser to the Gemini API with the user's own key (bring-your-own-key, free
+  tier available via Google AI Studio, stored locally only, never in any
+  cloud data), and structured outputs constrain the model response to a
+  fixed JSON schema. Invalid model values are dropped, not trusted.
 
 How it is tested: heuristics are covered by fixture payslips for same-line,
 bordered split-line, and termination layouts (the termination fixture asserts
@@ -310,8 +310,9 @@ Phase 3 (extraction):
   worker setup
 - [tesseract.js documentation](https://github.com/naptha/tesseract.js), worker
   lifecycle and confidence reporting
-- [Anthropic API: Messages](https://platform.claude.com/docs/en/api/messages)
-  and structured outputs, direct browser access header, current model ids
+- [Gemini API docs](https://ai.google.dev/gemini-api/docs), the
+  `generateContent` endpoint, `responseSchema` structured outputs, and
+  free-tier API key setup via Google AI Studio
 
 Phase 1 (tax engine):
 
