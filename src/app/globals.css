@@ -50,6 +50,15 @@
   --border: 1px;
   --depth: 1;
   --noise: 0;
+
+  /*
+   * Chart series colors, brand-family variants validated for lightness,
+   * chroma, CVD separation, and surface contrast on this theme's surface.
+   * Fixed assignment order: 1 income/retirement, 2 PAYE/donations, 3 other.
+   */
+  --chart-1: #006c49;
+  --chart-2: #2f5fa8;
+  --chart-3: #a86a00;
 }
 
 @plugin "daisyui/theme" {
@@ -87,6 +96,11 @@
   --border: 1px;
   --depth: 1;
   --noise: 0;
+
+  /* Chart series colors validated against this theme's dark surface. */
+  --chart-1: #0daf7a;
+  --chart-2: #5b8def;
+  --chart-3: #cd7f16;
 }
 
 @theme inline {

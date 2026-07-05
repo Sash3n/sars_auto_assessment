@@ -43,6 +43,35 @@ The app runs at http://localhost:3000.
 
 ## Current state
 
+Phase 6 (dashboard and analytics) is complete:
+
+- The home page becomes a dashboard once income is captured: the estimated
+  refund-or-owed verdict in SARS's own sign convention (positive means payable
+  by you; refunds render in the primary green, owed amounts in red), with
+  total income, PAYE, tax payable, and effective rate tiles.
+- Tax bracket visualisation: the year's bracket table on a linear rand scale
+  as a single-hue sequential ramp, with a marker at your taxable income, rate
+  labels printed in the segments, and the full bracket table available
+  underneath.
+- Month-by-month income and PAYE chart across all employers: two fixed
+  series, legend, per-bar tooltips, recessive gridlines, and a table view.
+- Deduction breakdown: horizontal proportion bars (retirement, donations,
+  home office) with amounts and percentages printed as text.
+- Year-over-year comparison: total income, effective rate, and refund/owed
+  per stored tax year, first-class because multiple years are stored.
+- Chart series colors are brand-family variants validated programmatically
+  (lightness band, chroma floor, colorblind separation, and contrast against
+  each theme's surface) for both light and dark modes, exposed as
+  `--chart-1..3` theme variables. Nothing in any chart rides on color alone:
+  legends, printed labels, and table views accompany every figure.
+
+How it is tested: the data shaping is pure and unit tested (monthly sums
+across employers, breakdown percentages, year-over-year filtering and
+sorting, bracket segment shares summing to 100 with the marker in the right
+segment, clamping for very high and zero incomes). Dashboard component tests
+cover the empty landing state and the populated dashboard (verdict, all four
+sections, marginal bracket text, deduction rows, year row).
+
 Phase 5 (auth, storage, and security) is complete:
 
 - Client-side encryption (`src/lib/crypto/encryption.ts`): PBKDF2-SHA256 with
