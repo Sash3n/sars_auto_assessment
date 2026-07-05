@@ -1,0 +1,37 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.*
+
+# Next.js build output
+.next/
+out/
+build/
+next-env.d.ts
+
+# Testing
+coverage/
+
+# Environment files, never commit secrets
+.env
+.env.*
+!.env.example
+
+# Vercel
+.vercel
+
+# TypeScript
+*.tsbuildinfo
+
+# Logs and OS noise
+npm-debug.log*
+yarn-error.log*
+.DS_Store
+Thumbs.db
+
+# Private project docs, per project convention these never get committed:
+# design references and any doc containing real personal financial figures.
+docs/PROJECT_SPEC.md
+docs/SARS_CALCULATOR_PROJECT_SPEC.md
+docs/design/
+docs/notes/
