@@ -6,7 +6,7 @@ import { renderWithStore } from "@/test/renderWithStore";
 
 vi.mock("@/lib/extraction/llm", async (importOriginal) => {
   const original = await importOriginal<typeof import("@/lib/extraction/llm")>();
-  return { ...original, extractWithAnthropic: vi.fn() };
+  return { ...original, extractWithGemini: vi.fn() };
 });
 
 afterEach(() => {
@@ -26,7 +26,7 @@ describe("UploadPage consent modal accessibility", () => {
       screen.getByRole("button", { name: /try cloud extraction/i }),
     );
 
-    const keyInput = screen.getByLabelText("Anthropic API key");
+    const keyInput = screen.getByLabelText("Gemini API key");
     expect(keyInput).toHaveFocus();
 
     await user.keyboard("{Escape}");

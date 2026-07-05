@@ -6,9 +6,9 @@ import { applySuggestionsToPayslip, mergeSuggestions } from "@/lib/extraction/ap
 import { extractPayslipSuggestions } from "@/lib/extraction/heuristics";
 import { clearApiKey, loadApiKey, saveApiKey } from "@/lib/extraction/keyStore";
 import {
-  ANTHROPIC_MODEL,
+  GEMINI_MODEL,
   CloudExtractionError,
-  extractWithAnthropic,
+  extractWithGemini,
 } from "@/lib/extraction/llm";
 import { extractPdfText, looksLikeScannedPdf } from "@/lib/extraction/pdf";
 import { extractImageText } from "@/lib/extraction/ocr";
@@ -164,7 +164,7 @@ export default function UploadPage() {
     setCloudBusy(true);
     setError(null);
     try {
-      const cloud = await extractWithAnthropic(apiKey, rawText);
+      const cloud = await extractWithGemini(apiKey, rawText);
       if (rememberKey) {
         saveApiKey(apiKey);
       }
@@ -387,34 +387,37 @@ export default function UploadPage() {
           <div className="card w-full max-w-lg border border-base-300 bg-base-100 shadow-xl">
             <div className="card-body gap-4">
               <h3 id="consent-heading" className="card-title text-base">
-                Send this payslip text to the Anthropic API?
+                Send this payslip text to the Gemini API?
               </h3>
               <div className="space-y-2 text-sm">
                 <p>
                   The extracted payslip text (shown on this page) will be sent
                   over the internet to{" "}
-                  <span className="font-mono">api.anthropic.com</span>, using
-                  the model <span className="font-mono">{ANTHROPIC_MODEL}</span>.
-                  It leaves your browser and this device.
+                  <span className="font-mono">
+                    generativelanguage.googleapis.com
+                  </span>
+                  , using the model{" "}
+                  <span className="font-mono">{GEMINI_MODEL}</span>. It leaves
+                  your browser and this device.
                 </p>
                 <p>
-                  The request goes directly from your browser to Anthropic
-                  using your own API key. It never passes through any server
+                  The request goes directly from your browser to Gemini using
+                  your own API key. It never passes through any server
                   belonging to this app, and the key is stored only on this
                   device, never in your cloud data.
                 </p>
               </div>
               <label className="form-control w-full">
                 <span className="label-caps mb-1 block opacity-70">
-                  Your Anthropic API key
+                  Your Gemini API key
                 </span>
                 <input
                   ref={apiKeyInputRef}
                   type="password"
                   className="input input-bordered w-full"
                   value={apiKey}
-                  aria-label="Anthropic API key"
-                  placeholder="sk-ant-..."
+                  aria-label="Gemini API key"
+                  placeholder="AIza..."
                   onChange={(event) => setApiKey(event.target.value)}
                 />
               </label>
@@ -440,12 +443,12 @@ export default function UploadPage() {
                   type="checkbox"
                   className="checkbox checkbox-primary"
                   checked={consentChecked}
-                  aria-label="I consent to sending this payslip text to Anthropic"
+                  aria-label="I consent to sending this payslip text to Gemini"
                   onChange={(event) => setConsentChecked(event.target.checked)}
                 />
                 <span className="text-sm">
                   I understand this payslip text is about to leave my browser
-                  and be sent to Anthropic, and I consent to that for this
+                  and be sent to Gemini, and I consent to that for this
                   extraction.
                 </span>
               </label>
@@ -466,7 +469,7 @@ export default function UploadPage() {
                   disabled={!consentChecked || apiKey.trim() === "" || cloudBusy}
                   onClick={() => void handleCloudSend()}
                 >
-                  {cloudBusy ? "Sending..." : "Send to Anthropic"}
+                  {cloudBusy ? "Sending..." : "Send to Gemini"}
                 </button>
               </div>
             </div>

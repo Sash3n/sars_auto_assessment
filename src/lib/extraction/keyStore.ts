@@ -5,7 +5,7 @@
  * to the provider when the user explicitly consents to a cloud extraction.
  */
 
-export const API_KEY_STORAGE_KEY = "sars-anthropic-api-key";
+export const API_KEY_STORAGE_KEY = "sars-gemini-api-key";
 
 export function loadApiKey(): string {
   try {
