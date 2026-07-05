@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import CurrencyField from "@/components/fields/CurrencyField";
 import NamedAmountEditor from "@/components/fields/NamedAmountEditor";
@@ -171,13 +172,18 @@ export default function IncomePage() {
             months is supported.
           </p>
         </div>
-        <button
-          type="button"
-          className="btn btn-primary"
-          onClick={() => setEditing(emptyPayslip(months[0].value))}
-        >
-          Add payslip
-        </button>
+        <div className="flex gap-2">
+          <Link href="/income/upload" className="btn btn-outline">
+            Upload payslip
+          </Link>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => setEditing(emptyPayslip(months[0].value))}
+          >
+            Add payslip
+          </button>
+        </div>
       </div>
 
       {editing ? (
