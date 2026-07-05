@@ -43,6 +43,42 @@ The app runs at http://localhost:3000.
 
 ## Current state
 
+Phase 1 (core tax engine) is complete:
+
+- Versioned tax year tables in `src/lib/tax-engine/tax-tables/`, one config file
+  per tax year (2025/26 and 2026/27), covering brackets, rebates by age band, tax
+  thresholds, medical scheme fees tax credit, retirement deduction rate and cap,
+  interest exemption, prescribed travel reimbursement rate, and CGT inclusion rate
+  and exclusions. A new tax year is a new file plus regression tests, not a code
+  change.
+- Calculation modules: bracket tax (`brackets.ts`), rebates and age bands
+  (`rebates.ts`), section 6A medical scheme fees credit and section 6B additional
+  medical credit (`medical.ts`), section 11F retirement deduction with the
+  lesser-of cap logic and carry-forward (`retirement.ts`), local interest
+  exemption (`interest.ts`), and taxable capital gains (`cgt.ts`).
+- Notable 2026/27 changes captured: brackets and rebates adjusted 3.4 percent,
+  retirement cap raised to R430,000 (first change since 2016), CGT annual
+  exclusion raised to R50,000, death-year exclusion to R440,000, primary
+  residence exclusion to R3,000,000, travel rate R4.95/km.
+
+How it is tested: the whole engine was written test-first (the failing reference
+suite is its own commit, before any implementation). 73 unit tests pin SARS
+published figures for both tax years as regression tests, including bracket
+boundary values, rebate stacking, no-tax thresholds, medical credit families,
+retirement cap and carry-forward, and CGT exclusions. Two invariant suites verify
+every year's bracket table is continuous and consistent with its own rebates.
+
+### Annual tax table process
+
+Each February/March, after the Budget Speech:
+
+1. Verify the new year's figures against the Budget Speech tax guide from
+   National Treasury and cross-check a reputable secondary source.
+2. Add a new `year-YYYY-YY.ts` file under `src/lib/tax-engine/tax-tables/` with
+   source links in the file comment. Never edit a previous year's file.
+3. Add regression tests pinning the new published figures so an accidental edit
+   is caught by CI.
+
 Phase 0 (scaffold) is complete:
 
 - Next.js + TypeScript + Tailwind + DaisyUI project setup.
@@ -68,5 +104,16 @@ are never deleted, every PR carries its own tests and a README update, no
 
 ## Research links
 
-Each feature PR adds the research links consulted for that change. Phase 0 has no
-feature-specific research; this section grows from Phase 1 onward.
+Each feature PR adds the research links consulted for that change.
+
+Phase 1 (tax engine):
+
+- [SARS: Rates of Tax for Individuals](https://www.sars.gov.za/tax-rates/income-tax/rates-of-tax-for-individuals/),
+  brackets, rebates, and thresholds for both supported years
+- [National Treasury: Budget 2026 Tax Guide](https://www.treasury.gov.za/documents/National%20Budget/2026/sars/Budget%202026%20Tax%20guide.pdf),
+  2026/27 changes including the retirement cap increase
+- [SARS: Rates per kilometre](https://www.sars.gov.za/tax-rates/employers/rates-per-kilometre/),
+  prescribed reimbursive travel rates
+- [SARS: CGT annual exclusion](https://www.sars.gov.za/types-of-tax/capital-gains-tax/proceeds/calculation-of-taxable-capital-gains-and-assessed-capital-losses/annual-exclusion/)
+- [PwC Tax Summaries: South Africa income determination](https://taxsummaries.pwc.com/south-africa/individual/income-determination),
+  cross-check for the 2026/27 CGT exclusions
