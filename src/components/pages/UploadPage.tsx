@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { applySuggestionsToPayslip, mergeSuggestions } from "@/lib/extraction/apply";
 import { extractPayslipSuggestions } from "@/lib/extraction/heuristics";
 import { clearApiKey, loadApiKey, saveApiKey } from "@/lib/extraction/keyStore";
@@ -83,6 +83,24 @@ export default function UploadPage() {
   const [rememberKey, setRememberKey] = useState(false);
   const [cloudBusy, setCloudBusy] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const apiKeyInputRef = useRef<HTMLInputElement>(null);
+
+  // The consent modal closes on Escape and moves focus to the key field on
+  // open, so the whole flow works from the keyboard.
+  useEffect(() => {
+    if (!consentOpen) {
+      return;
+    }
+    apiKeyInputRef.current?.focus();
+    function onKeyDown(event: globalThis.KeyboardEvent) {
+      if (event.key === "Escape") {
+        setConsentOpen(false);
+        setConsentChecked(false);
+      }
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [consentOpen]);
 
   function runHeuristics(text: string, source: "paste" | "pdf-text" | "ocr") {
     const result = extractPayslipSuggestions(text, source);
@@ -391,6 +409,7 @@ export default function UploadPage() {
                   Your Anthropic API key
                 </span>
                 <input
+                  ref={apiKeyInputRef}
                   type="password"
                   className="input input-bordered w-full"
                   value={apiKey}

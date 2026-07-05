@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
+import type { KeyboardEvent, ReactNode } from "react";
 import ThemeToggle from "@/components/ThemeToggle";
 import { useStore } from "@/lib/store/StoreProvider";
 import { listTaxYears } from "@/lib/tax-engine/tax-tables";
@@ -112,6 +112,18 @@ export const NAV_ITEMS: NavItem[] = [
   },
 ];
 
+/** Key summary views for the mobile bottom-tab bar, per the design reference. */
+const DOCK_ITEMS = NAV_ITEMS.filter((item) =>
+  ["/", "/income", "/results", "/compare"].includes(item.href),
+);
+
+function activateOnKey(event: KeyboardEvent<HTMLElement>) {
+  if (event.key === "Enter" || event.key === " ") {
+    event.preventDefault();
+    event.currentTarget.click();
+  }
+}
+
 function YearSelect() {
   const { state, dispatch } = useStore();
   return (
@@ -138,7 +150,7 @@ function YearSelect() {
 function SidebarContent() {
   const pathname = usePathname();
   return (
-    <div className="flex h-full w-72 flex-col border-r border-base-300 bg-base-100 p-4">
+    <div className="flex h-full w-[280px] flex-col border-r border-base-300 bg-base-100 p-4">
       <div className="mb-6">
         <p className="text-lg font-bold tracking-tight text-primary">
           SARS TaxCalc
@@ -179,11 +191,20 @@ export default function AppShell({ children }: { children: ReactNode }) {
     <div className="drawer lg:drawer-open min-h-dvh">
       <input id="app-drawer" type="checkbox" className="drawer-toggle" />
       <div className="drawer-content flex min-h-dvh flex-col">
+        <a
+          href="#main-content"
+          className="btn btn-primary btn-sm sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50"
+        >
+          Skip to content
+        </a>
         <header className="sticky top-0 z-10 border-b border-base-300 bg-base-100">
           <div className="flex items-center gap-3 px-4 py-3">
             <label
               htmlFor="app-drawer"
               aria-label="Open navigation"
+              role="button"
+              tabIndex={0}
+              onKeyDown={activateOnKey}
               className="btn btn-ghost btn-square btn-sm lg:hidden"
             >
               <svg
@@ -205,19 +226,54 @@ export default function AppShell({ children }: { children: ReactNode }) {
             <ThemeToggle />
           </div>
         </header>
-        <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className="mx-auto w-full max-w-[1280px] flex-1 px-4 py-8 pb-24 outline-none lg:pb-8"
+        >
           {children}
         </main>
-        <footer className="border-t border-base-300 bg-base-100">
-          <div className="mx-auto w-full max-w-5xl px-4 py-6 text-sm opacity-70">
+        <footer className="hidden border-t border-base-300 bg-base-100 lg:block">
+          <div className="mx-auto w-full max-w-[1280px] px-4 py-6 text-sm opacity-70">
             <p>
               Not an official SARS application. For estimation purposes only.
             </p>
             <p>Not tax advice. Not affiliated with or endorsed by SARS.</p>
           </div>
         </footer>
+        <div className="border-t border-base-300 bg-base-100 pb-20 lg:hidden">
+          <div className="px-4 py-4 text-xs opacity-70">
+            <p>
+              Not an official SARS application. For estimation purposes only.
+            </p>
+            <p>Not tax advice. Not affiliated with or endorsed by SARS.</p>
+          </div>
+        </div>
+        <nav
+          aria-label="Quick navigation"
+          className="fixed inset-x-0 bottom-0 z-20 border-t border-base-300 bg-base-100 lg:hidden"
+        >
+          <ul className="grid grid-cols-4">
+            {DOCK_ITEMS.map((item) => (
+              <li key={item.href}>
+                <Link
+                  href={item.href}
+                  aria-current={pathname === item.href ? "page" : undefined}
+                  className={`flex flex-col items-center gap-0.5 py-2 text-xs ${
+                    pathname === item.href
+                      ? "font-semibold text-primary"
+                      : "opacity-70"
+                  }`}
+                >
+                  {item.icon}
+                  {item.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
       </div>
-      <div className="drawer-side z-20">
+      <div className="drawer-side z-30">
         <label
           htmlFor="app-drawer"
           aria-label="Close navigation"
