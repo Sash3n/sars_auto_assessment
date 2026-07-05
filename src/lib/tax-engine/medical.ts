@@ -70,10 +70,12 @@ export interface AdditionalMedicalCreditInput {
  * Everyone else: 25 percent of the amount by which the sum of contributions
  * exceeding four times the section 6A credit plus qualifying expenses
  * exceeds 7.5 percent of taxable income.
+ *
+ * The percentages and multiples are statutory constants from the Act, not
+ * Budget-adjusted table values, so this function takes no tax year tables.
  */
 export function additionalMedicalCredit(
   input: AdditionalMedicalCreditInput,
-  _tables: TaxYearTables,
 ): number {
   const {
     age,

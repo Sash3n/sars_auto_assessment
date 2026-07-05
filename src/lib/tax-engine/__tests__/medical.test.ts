@@ -65,9 +65,7 @@ describe("additionalMedicalCredit (section 6B)", () => {
         annualSchemeCredit: 14_640,
         qualifyingExpenses: 30_000,
         taxableIncome: 400_000,
-      },
-      y2025,
-    );
+      });
     // Contributions do not exceed 4 x 14 640 = 58 560. Expenses of 30 000
     // do not exceed 7.5 percent of 400 000 = 30 000.
     expect(credit).toBe(0);
@@ -82,9 +80,7 @@ describe("additionalMedicalCredit (section 6B)", () => {
         annualSchemeCredit: 14_640,
         qualifyingExpenses: 25_000,
         taxableIncome: 400_000,
-      },
-      y2025,
-    );
+      });
     // Excess contributions: 80 000 - 58 560 = 21 440.
     // 21 440 + 25 000 = 46 440, less 30 000 floor = 16 440. At 25 percent.
     expect(credit).toBe(4_110);
@@ -99,9 +95,7 @@ describe("additionalMedicalCredit (section 6B)", () => {
         annualSchemeCredit: 8_736,
         qualifyingExpenses: 20_000,
         taxableIncome: 300_000,
-      },
-      y2025,
-    );
+      });
     // Excess contributions: 60 000 - 26 208 = 33 792.
     // 33.3% of 33 792 = 11 252.736 and 33.3% of 20 000 = 6 660.
     expect(credit).toBeCloseTo(17_912.74, 2);
@@ -116,9 +110,7 @@ describe("additionalMedicalCredit (section 6B)", () => {
         annualSchemeCredit: 8_736,
         qualifyingExpenses: 20_000,
         taxableIncome: 300_000,
-      },
-      y2025,
-    );
+      });
     const disabled = additionalMedicalCredit(
       {
         age: 35,
@@ -127,9 +119,7 @@ describe("additionalMedicalCredit (section 6B)", () => {
         annualSchemeCredit: 8_736,
         qualifyingExpenses: 20_000,
         taxableIncome: 300_000,
-      },
-      y2025,
-    );
+      });
     expect(disabled).toBe(senior);
   });
 
@@ -142,9 +132,7 @@ describe("additionalMedicalCredit (section 6B)", () => {
         annualSchemeCredit: 0,
         qualifyingExpenses: 0,
         taxableIncome: 500_000,
-      },
-      y2025,
-    );
+      });
     expect(credit).toBe(0);
   });
 });
