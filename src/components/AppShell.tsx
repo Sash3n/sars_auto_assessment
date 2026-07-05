@@ -100,6 +100,16 @@ export const NAV_ITEMS: NavItem[] = [
       </svg>
     ),
   },
+  {
+    href: "/account",
+    label: "Account",
+    icon: (
+      <svg {...iconProps} aria-hidden="true">
+        <circle cx="12" cy="8" r="4" />
+        <path d="M4 21c0-4 3.6-6 8-6s8 2 8 6" />
+      </svg>
+    ),
+  },
 ];
 
 function YearSelect() {
