@@ -2,13 +2,14 @@ import type { ExtractableField, FieldSuggestion } from "./types";
 
 /*
  * Cloud LLM fallback, bring-your-own-API-key. The request goes directly from
- * the browser to the Anthropic API, never through any backend of ours. It
+ * the browser to the Gemini API, never through any backend of ours. It
  * only runs after the user has explicitly consented in the modal, per
  * instance, having been told exactly what will be sent and to whom.
  */
 
-export const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
-export const ANTHROPIC_MODEL = "claude-opus-4-8";
+export const GEMINI_API_URL =
+  "https://generativelanguage.googleapis.com/v1beta/models";
+export const GEMINI_MODEL = "gemini-2.0-flash";
 
 const AMOUNT_FIELDS: ExtractableField[] = [
   "basicSalary",
@@ -22,19 +23,20 @@ const AMOUNT_FIELDS: ExtractableField[] = [
 ];
 
 /*
- * Structured output schema: the response is constrained to this shape, so
- * parsing cannot silently drift. additionalProperties false throughout.
+ * Structured output schema, in Gemini's OpenAPI-subset shape: the response
+ * is constrained to this shape, so parsing cannot silently drift. Gemini's
+ * responseSchema does not support additionalProperties.
  */
 const extractionSchema = {
-  type: "object",
+  type: "OBJECT",
   properties: {
     fields: {
-      type: "array",
+      type: "ARRAY",
       items: {
-        type: "object",
+        type: "OBJECT",
         properties: {
           field: {
-            type: "string",
+            type: "STRING",
             enum: [
               "employer",
               "periodMonth",
@@ -51,34 +53,25 @@ const extractionSchema = {
               "nonTaxDeduction",
             ],
           },
-          value: { type: "string" },
-          label: { type: "string" },
-          confidence: { type: "number" },
-          evidence: { type: "string" },
+          value: { type: "STRING" },
+          label: { type: "STRING" },
+          confidence: { type: "NUMBER" },
+          evidence: { type: "STRING" },
         },
         required: ["field", "value", "confidence", "evidence"],
-        additionalProperties: false,
       },
     },
   },
   required: ["fields"],
-  additionalProperties: false,
 } as const;
 
 export function buildExtractionRequestBody(rawText: string): object {
   return {
-    model: ANTHROPIC_MODEL,
-    max_tokens: 4096,
-    output_config: {
-      format: {
-        type: "json_schema",
-        schema: extractionSchema,
-      },
-    },
-    messages: [
+    contents: [
       {
-        role: "user",
-        content: `Extract South African payslip fields from the text below.
+        parts: [
+          {
+            text: `Extract South African payslip fields from the text below.
 
 Rules:
 - Amounts are plain numbers without currency symbols or separators, as strings, for example "30000.00".
@@ -92,8 +85,14 @@ Payslip text:
 """
 ${rawText}
 """`,
+          },
+        ],
       },
     ],
+    generationConfig: {
+      responseMimeType: "application/json",
+      responseSchema: extractionSchema,
+    },
   };
 }
 
@@ -160,58 +159,71 @@ function toSuggestion(raw: RawLlmField): FieldSuggestion | null {
   };
 }
 
-export async function extractWithAnthropic(
+export async function extractWithGemini(
   apiKey: string,
   rawText: string,
   fetchImpl: typeof fetch = fetch,
 ): Promise<FieldSuggestion[]> {
   if (apiKey.trim() === "") {
-    throw new CloudExtractionError("An Anthropic API key is required.");
+    throw new CloudExtractionError("A Gemini API key is required.");
   }
 
   let response: Response;
   try {
-    response = await fetchImpl(ANTHROPIC_API_URL, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "x-api-key": apiKey.trim(),
-        "anthropic-version": "2023-06-01",
-        // Required for direct browser calls. This is the consented,
-        // backend-free flow the project spec mandates.
-        "anthropic-dangerous-direct-browser-access": "true",
+    response = await fetchImpl(
+      `${GEMINI_API_URL}/${GEMINI_MODEL}:generateContent`,
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-goog-api-key": apiKey.trim(),
+        },
+        body: JSON.stringify(buildExtractionRequestBody(rawText)),
       },
-      body: JSON.stringify(buildExtractionRequestBody(rawText)),
-    });
+    );
   } catch {
     throw new CloudExtractionError(
-      "Could not reach the Anthropic API. Check your connection.",
+      "Could not reach the Gemini API. Check your connection.",
     );
   }
 
   if (!response.ok) {
     const message =
-      response.status === 401
+      response.status === 400 || response.status === 403
         ? "The API key was rejected. Check it and try again."
         : response.status === 429
-          ? "Rate limited by the Anthropic API. Wait a moment and try again."
-          : `The Anthropic API returned an error (HTTP ${response.status}).`;
+          ? "Rate limited by the Gemini API. Wait a moment and try again."
+          : `The Gemini API returned an error (HTTP ${response.status}).`;
     throw new CloudExtractionError(message, response.status);
   }
 
   const payload = (await response.json()) as {
-    stop_reason?: string;
-    content?: { type: string; text?: string }[];
+    promptFeedback?: { blockReason?: string };
+    candidates?: {
+      finishReason?: string;
+      content?: { parts?: { text?: string }[] };
+    }[];
   };
 
-  if (payload.stop_reason === "refusal") {
+  if (payload.promptFeedback?.blockReason) {
     throw new CloudExtractionError(
       "The model declined this request. Capture the fields manually instead.",
     );
   }
 
-  const textBlock = payload.content?.find((block) => block.type === "text");
-  if (!textBlock?.text) {
+  const candidate = payload.candidates?.[0];
+  if (
+    !candidate ||
+    candidate.finishReason === "SAFETY" ||
+    candidate.finishReason === "RECITATION"
+  ) {
+    throw new CloudExtractionError(
+      "The model declined this request. Capture the fields manually instead.",
+    );
+  }
+
+  const textPart = candidate.content?.parts?.find((part) => part.text);
+  if (!textPart?.text) {
     throw new CloudExtractionError(
       "The model returned no usable content. Try again or capture manually.",
     );
@@ -219,7 +231,7 @@ export async function extractWithAnthropic(
 
   let parsed: { fields?: RawLlmField[] };
   try {
-    parsed = JSON.parse(textBlock.text) as { fields?: RawLlmField[] };
+    parsed = JSON.parse(textPart.text) as { fields?: RawLlmField[] };
   } catch {
     throw new CloudExtractionError(
       "The model response could not be parsed. Try again or capture manually.",
