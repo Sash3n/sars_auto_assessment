@@ -1,5 +1,15 @@
 import "@testing-library/jest-dom/vitest";
+import { webcrypto } from "node:crypto";
 import { vi } from "vitest";
+
+// jsdom ships getRandomValues but not SubtleCrypto. The encryption module
+// needs the real Web Crypto API, which Node provides.
+if (typeof globalThis.crypto === "undefined" || !globalThis.crypto.subtle) {
+  Object.defineProperty(globalThis, "crypto", {
+    configurable: true,
+    value: webcrypto,
+  });
+}
 
 // jsdom does not implement matchMedia. The theme resolver only reads
 // `matches`, but the full listener surface is stubbed so any consumer works.
