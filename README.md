@@ -43,6 +43,40 @@ The app runs at http://localhost:3000.
 
 ## Current state
 
+Phase 3 (extraction pipeline) is complete:
+
+- Local-first extraction (`src/lib/extraction/`): PDF text-layer reading via
+  `pdfjs-dist` with y-position line reconstruction (so bordered layouts where
+  the label and amount sit far apart still parse), on-device OCR via
+  `tesseract.js` for images (nothing leaves the browser), and a paste-raw-text
+  path. Scanned PDFs are detected and the user is guided to the image or paste
+  path instead of silently failing.
+- Field-suggestion heuristics for the full payslip field set: same-line
+  matching at high confidence, a two-line lookahead for bordered layouts at
+  reduced confidence, named allowance detection, employer and period
+  detection, and warnings instead of assumptions. A missing PAYE line produces
+  a warning that final payslips can legitimately omit it, never a silent zero.
+- Confidence scoring per extracted field (high/medium/low), surfaced as badges.
+  The user reviews every suggested field, can edit or exclude each one, and
+  low-confidence rows start unchecked.
+- Cloud LLM fallback, strictly opt-in per instance: a consent modal states
+  exactly what will be sent (the extracted text) and to which provider
+  (`api.anthropic.com`), the request goes directly from the browser to the
+  Anthropic API with the user's own key (bring-your-own-key, stored locally
+  only, never in any cloud data), and structured outputs constrain the model
+  response to a fixed JSON schema. Invalid model values are dropped, not
+  trusted.
+
+How it is tested: heuristics are covered by fixture payslips for same-line,
+bordered split-line, and termination layouts (the termination fixture asserts
+the no-PAYE warning). The PDF line reconstruction is unit tested as a pure
+function. The cloud client is tested against a fake fetch (request shape,
+direct-browser header, field mapping, invalid value rejection, key and rate
+limit errors, refusal handling). Upload page component tests drive paste
+analysis, row exclusion, saving into the store, and assert the consent gate:
+the send button stays disabled until both a key and explicit consent are
+given, and the cloud is never called without them.
+
 Phase 2 (multi-source income model) is complete:
 
 - Data model in `src/lib/model/`: payslips with an `employer` field and no cap on
@@ -138,6 +172,15 @@ are never deleted, every PR carries its own tests and a README update, no
 ## Research links
 
 Each feature PR adds the research links consulted for that change.
+
+Phase 3 (extraction):
+
+- [pdf.js documentation](https://mozilla.github.io/pdf.js/), text content and
+  worker setup
+- [tesseract.js documentation](https://github.com/naptha/tesseract.js), worker
+  lifecycle and confidence reporting
+- [Anthropic API: Messages](https://platform.claude.com/docs/en/api/messages)
+  and structured outputs, direct browser access header, current model ids
 
 Phase 1 (tax engine):
 
