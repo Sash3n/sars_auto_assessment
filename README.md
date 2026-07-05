@@ -43,6 +43,52 @@ The app runs at http://localhost:3000.
 
 ## Current state
 
+Phase 5 (auth, storage, and security) is complete:
+
+- Client-side encryption (`src/lib/crypto/encryption.ts`): PBKDF2-SHA256 with
+  310 000 iterations and a random per-save salt derives an AES-GCM 256 key
+  from a passphrase only the user holds. Every save uses a fresh IV, and GCM
+  authenticates the ciphertext so tampering fails outright. Firestore only
+  ever stores ciphertext envelopes; the passphrase never leaves the device
+  and is never persisted. Losing it makes the cloud copy unrecoverable, by
+  design, and the UI says exactly that.
+- Firebase (`src/lib/firebase/`): configuration comes only from environment
+  variables (see `.env.example`), targeting the existing
+  `sars-auto-assessment` project. Email/password auth and a single encrypted
+  document per user at `users/{uid}/private/appData`. The SDK loads lazily
+  and the whole app stays fully usable with Firebase unconfigured
+  (local-only mode).
+- Firestore security rules (`firestore.rules`): per-user documents readable
+  and writable only by the authenticated owner, reference collections
+  world-readable and never client-writable, everything else denied by
+  default. Deploy them in the Firebase console or with the Firebase CLI.
+- Account page: sign up, sign in, sign out, passphrase entry (memory only),
+  save/load with a document size guard under Firestore's 1 MiB limit, and
+  generic user-facing error messages (detail goes to the console only).
+- Attack surface notes: the app exposes no server API routes at all, so
+  there is nothing to rate limit server-side; the cloud LLM fallback calls
+  the provider directly from the browser by explicit consent, and Firestore
+  access is bounded by the rules plus Firebase's own quotas. All
+  user-supplied values continue to pass the model validation boundary, and
+  writes are size-checked before leaving the device.
+
+How it is tested: encryption tests cover round-trip fidelity, fresh salt and
+IV per save, ciphertext opacity, wrong-passphrase and tamper rejection,
+version gating, and the short-passphrase guard. Sync tests cover the
+versioned envelope round trip and malformed document rejection, without
+touching Firestore (the pure build/read steps are separated from the thin
+write/read wrappers). Account page tests mock the Firebase layer and drive
+local-only mode, sign in, the short-password guard, passphrase-required
+saves, encrypted save calls, and cloud load hydrating the store.
+
+### Setting up cloud sync (optional)
+
+1. In the Firebase console for `sars-auto-assessment`, add a web app and copy
+   its config values into `.env.local` (template: `.env.example`).
+2. Enable Email/Password sign-in under Authentication.
+3. Deploy `firestore.rules` (console rules editor or `firebase deploy --only
+   firestore:rules`).
+
 Phase 4 (assessment engine and SARS comparison) is complete:
 
 - Assessment composer (`src/lib/tax-engine/assessment.ts`): composes every
