@@ -1,9 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import {
-  ANTHROPIC_API_URL,
+  GEMINI_API_URL,
+  GEMINI_MODEL,
   buildExtractionRequestBody,
   CloudExtractionError,
-  extractWithAnthropic,
+  extractWithGemini,
 } from "@/lib/extraction/llm";
 
 function fakeResponse(body: unknown, status = 200): Response {
@@ -16,36 +17,37 @@ function fakeResponse(body: unknown, status = 200): Response {
 
 function successPayload(fields: unknown[]) {
   return {
-    stop_reason: "end_turn",
-    content: [{ type: "text", text: JSON.stringify({ fields }) }],
+    candidates: [
+      {
+        finishReason: "STOP",
+        content: { parts: [{ text: JSON.stringify({ fields }) }] },
+      },
+    ],
   };
 }
 
 describe("buildExtractionRequestBody", () => {
   it("embeds the payslip text and constrains output to the schema", () => {
     const body = buildExtractionRequestBody("Basic salary 30 000") as {
-      messages: { content: string }[];
-      output_config: { format: { type: string } };
-      model: string;
+      contents: { parts: { text: string }[] }[];
+      generationConfig: { responseMimeType: string };
     };
-    expect(body.messages[0].content).toContain("Basic salary 30 000");
-    expect(body.output_config.format.type).toBe("json_schema");
-    expect(body.model).toBe("claude-opus-4-8");
+    expect(body.contents[0].parts[0].text).toContain("Basic salary 30 000");
+    expect(body.generationConfig.responseMimeType).toBe("application/json");
   });
 });
 
-describe("extractWithAnthropic", () => {
-  it("sends the request directly to the Anthropic API with the user's key", async () => {
+describe("extractWithGemini", () => {
+  it("sends the request directly to the Gemini API with the user's key", async () => {
     const fetchMock = vi.fn().mockResolvedValue(fakeResponse(successPayload([])));
-    await extractWithAnthropic("sk-ant-test", "text", fetchMock);
+    await extractWithGemini("AIza-test", "text", fetchMock);
 
     expect(fetchMock).toHaveBeenCalledWith(
-      ANTHROPIC_API_URL,
+      `${GEMINI_API_URL}/${GEMINI_MODEL}:generateContent`,
       expect.objectContaining({
         method: "POST",
         headers: expect.objectContaining({
-          "x-api-key": "sk-ant-test",
-          "anthropic-dangerous-direct-browser-access": "true",
+          "x-goog-api-key": "AIza-test",
         }),
       }),
     );
@@ -77,7 +79,7 @@ describe("extractWithAnthropic", () => {
         ]),
       ),
     );
-    const suggestions = await extractWithAnthropic("sk", "text", fetchMock);
+    const suggestions = await extractWithGemini("key", "text", fetchMock);
     expect(suggestions).toHaveLength(3);
     expect(suggestions[0]).toMatchObject({
       field: "basicSalary",
@@ -97,7 +99,7 @@ describe("extractWithAnthropic", () => {
         ]),
       ),
     );
-    const suggestions = await extractWithAnthropic("sk", "text", fetchMock);
+    const suggestions = await extractWithGemini("key", "text", fetchMock);
     expect(suggestions).toHaveLength(0);
   });
 
@@ -109,29 +111,29 @@ describe("extractWithAnthropic", () => {
         ]),
       ),
     );
-    const suggestions = await extractWithAnthropic("sk", "text", fetchMock);
+    const suggestions = await extractWithGemini("key", "text", fetchMock);
     expect(suggestions[0].confidence).toBe(1);
   });
 
   it("explains a rejected key", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(fakeResponse({}, 401));
+    const fetchMock = vi.fn().mockResolvedValue(fakeResponse({}, 400));
     await expect(
-      extractWithAnthropic("sk-bad", "text", fetchMock),
+      extractWithGemini("bad-key", "text", fetchMock),
     ).rejects.toThrow(/key was rejected/i);
   });
 
   it("surfaces refusals as a friendly error", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
-      fakeResponse({ stop_reason: "refusal", content: [] }),
+      fakeResponse({ promptFeedback: { blockReason: "SAFETY" } }),
     );
-    await expect(extractWithAnthropic("sk", "text", fetchMock)).rejects.toThrow(
+    await expect(extractWithGemini("key", "text", fetchMock)).rejects.toThrow(
       /declined/i,
     );
   });
 
   it("requires a key before sending anything", async () => {
     const fetchMock = vi.fn();
-    await expect(extractWithAnthropic("  ", "text", fetchMock)).rejects.toThrow(
+    await expect(extractWithGemini("  ", "text", fetchMock)).rejects.toThrow(
       CloudExtractionError,
     );
     expect(fetchMock).not.toHaveBeenCalled();
@@ -139,7 +141,7 @@ describe("extractWithAnthropic", () => {
 
   it("wraps network failures", async () => {
     const fetchMock = vi.fn().mockRejectedValue(new TypeError("offline"));
-    await expect(extractWithAnthropic("sk", "text", fetchMock)).rejects.toThrow(
+    await expect(extractWithGemini("key", "text", fetchMock)).rejects.toThrow(
       /could not reach/i,
     );
   });

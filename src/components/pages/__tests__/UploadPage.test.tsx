@@ -9,7 +9,7 @@ vi.mock("@/lib/extraction/llm", async (importOriginal) => {
   const original = await importOriginal<typeof import("@/lib/extraction/llm")>();
   return {
     ...original,
-    extractWithAnthropic: vi.fn().mockResolvedValue([
+    extractWithGemini: vi.fn().mockResolvedValue([
       {
         field: "paye",
         value: 6_000,
@@ -21,7 +21,7 @@ vi.mock("@/lib/extraction/llm", async (importOriginal) => {
   };
 });
 
-import { extractWithAnthropic } from "@/lib/extraction/llm";
+import { extractWithGemini } from "@/lib/extraction/llm";
 
 const PAYSLIP_TEXT = `Acme Widgets Pty Ltd
 Payslip for March 2025
@@ -98,16 +98,18 @@ describe("UploadPage", () => {
     );
 
     const dialog = screen.getByRole("dialog");
-    expect(within(dialog).getByText(/api\.anthropic\.com/)).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(/generativelanguage\.googleapis\.com/),
+    ).toBeInTheDocument();
 
     const send = within(dialog).getByRole("button", {
-      name: /send to anthropic/i,
+      name: /send to gemini/i,
     });
     expect(send).toBeDisabled();
 
     await user.type(
-      within(dialog).getByLabelText("Anthropic API key"),
-      "sk-ant-test",
+      within(dialog).getByLabelText("Gemini API key"),
+      "AIza-test",
     );
     expect(send).toBeDisabled();
 
@@ -117,8 +119,8 @@ describe("UploadPage", () => {
     expect(send).toBeEnabled();
 
     await user.click(send);
-    expect(extractWithAnthropic).toHaveBeenCalledWith(
-      "sk-ant-test",
+    expect(extractWithGemini).toHaveBeenCalledWith(
+      "AIza-test",
       expect.stringContaining("Basic salary"),
     );
     // On success the modal closes and the merged table remains.
@@ -130,6 +132,6 @@ describe("UploadPage", () => {
     const user = userEvent.setup();
     renderWithStore(<UploadPage />);
     await pasteAndAnalyse(user);
-    expect(extractWithAnthropic).not.toHaveBeenCalled();
+    expect(extractWithGemini).not.toHaveBeenCalled();
   });
 });
