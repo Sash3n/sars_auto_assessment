@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   configured: true,
   currentUser: null as { uid: string; email: string } | null,
   signInWithEmail: vi.fn(),
+  signInWithGoogle: vi.fn(),
   signUpWithEmail: vi.fn(),
   signOutUser: vi.fn(),
   saveToCloud: vi.fn(),
@@ -21,6 +22,7 @@ vi.mock("@/lib/firebase/config", () => ({
 
 vi.mock("@/lib/firebase/client", () => ({
   signInWithEmail: mocks.signInWithEmail,
+  signInWithGoogle: mocks.signInWithGoogle,
   signUpWithEmail: mocks.signUpWithEmail,
   signOutUser: mocks.signOutUser,
   watchAuthState: async (onChange: (user: unknown) => void) => {
@@ -77,6 +79,36 @@ describe("AccountPage", () => {
     await user.click(screen.getByRole("button", { name: /^sign in$/i }));
 
     expect(mocks.signInWithEmail).not.toHaveBeenCalled();
+  });
+
+  it("signs in with Google", async () => {
+    mocks.signInWithGoogle.mockResolvedValue({
+      uid: "uid-1",
+      email: "me@example.com",
+    });
+    const user = userEvent.setup();
+    renderWithStore(<AccountPage />);
+
+    await user.click(
+      await screen.findByRole("button", { name: /continue with google/i }),
+    );
+
+    expect(mocks.signInWithGoogle).toHaveBeenCalled();
+    expect(await screen.findByRole("status")).toHaveTextContent(/signed in/i);
+  });
+
+  it("shows a friendly message when the Google popup is closed", async () => {
+    mocks.signInWithGoogle.mockRejectedValue({
+      code: "auth/popup-closed-by-user",
+    });
+    const user = userEvent.setup();
+    renderWithStore(<AccountPage />);
+
+    await user.click(
+      await screen.findByRole("button", { name: /continue with google/i }),
+    );
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/cancelled/i);
   });
 
   it("saves encrypted data to the cloud when signed in", async () => {

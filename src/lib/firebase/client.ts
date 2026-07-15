@@ -64,6 +64,15 @@ export async function signInWithEmail(
   return credential.user;
 }
 
+export async function signInWithGoogle(): Promise<User> {
+  const auth = await getFirebaseAuth();
+  const { GoogleAuthProvider, signInWithPopup } = await import(
+    "firebase/auth"
+  );
+  const credential = await signInWithPopup(auth, new GoogleAuthProvider());
+  return credential.user;
+}
+
 export async function signOutUser(): Promise<void> {
   const auth = await getFirebaseAuth();
   const { signOut } = await import("firebase/auth");

@@ -97,6 +97,19 @@ segment, clamping for very high and zero incomes). Dashboard component tests
 cover the empty landing state and the populated dashboard (verdict, all four
 sections, marginal bracket text, deduction rows, year row).
 
+Google sign-in was added alongside email/password auth: a "Continue with
+Google" button on the Account page (`src/lib/firebase/client.ts`,
+`signInWithGoogle`) using Firebase's `GoogleAuthProvider` and a popup flow.
+Enable the Google provider for the `sars-auto-assessment` project under
+Firebase console > Authentication > Sign-in method. Popup-specific failures
+(closed by the user, blocked, or an existing email tied to a different
+provider) get their own friendly messages alongside the existing
+email/password ones.
+
+How it is tested: Account page tests cover a successful Google sign-in and
+the cancelled-popup error message, mocking the Firebase client the same way
+as the existing email/password tests.
+
 Phase 5 (auth, storage, and security) is complete:
 
 - Client-side encryption (`src/lib/crypto/encryption.ts`): PBKDF2-SHA256 with
@@ -108,8 +121,9 @@ Phase 5 (auth, storage, and security) is complete:
   design, and the UI says exactly that.
 - Firebase (`src/lib/firebase/`): configuration comes only from environment
   variables (see `.env.example`), targeting the existing
-  `sars-auto-assessment` project. Email/password auth and a single encrypted
-  document per user at `users/{uid}/private/appData`. The SDK loads lazily
+  `sars-auto-assessment` project. Email/password and Google sign-in, and a
+  single encrypted document per user at `users/{uid}/private/appData`. The
+  SDK loads lazily
   and the whole app stays fully usable with Firebase unconfigured
   (local-only mode).
 - Firestore security rules (`firestore.rules`): per-user documents readable
