@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { User } from "firebase/auth";
 import {
   signInWithEmail,
+  signInWithGoogle,
   signOutUser,
   signUpWithEmail,
   watchAuthState,
@@ -39,6 +40,15 @@ function friendlyAuthError(cause: unknown): string {
   }
   if (code.includes("too-many-requests")) {
     return "Too many attempts. Wait a moment and try again.";
+  }
+  if (code.includes("popup-closed-by-user") || code.includes("cancelled-popup-request")) {
+    return "Google sign-in was cancelled.";
+  }
+  if (code.includes("popup-blocked")) {
+    return "The sign-in popup was blocked. Allow popups for this site and try again.";
+  }
+  if (code.includes("account-exists-with-different-credential")) {
+    return "An account already exists with this email using a different sign-in method.";
   }
   return "Something went wrong. Try again.";
 }
@@ -98,6 +108,21 @@ export default function AccountPage() {
       setPassword("");
     } catch (cause) {
       console.error("Auth error", cause);
+      setError(friendlyAuthError(cause));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleGoogleSignIn() {
+    setError(null);
+    setNotice(null);
+    setBusy(true);
+    try {
+      await signInWithGoogle();
+      setNotice("Signed in.");
+    } catch (cause) {
+      console.error("Google auth error", cause);
       setError(friendlyAuthError(cause));
     } finally {
       setBusy(false);
@@ -291,6 +316,15 @@ export default function AccountPage() {
                 Create account
               </button>
             </div>
+            <button
+              type="button"
+              className="btn btn-outline w-full"
+              disabled={busy}
+              onClick={() => void handleGoogleSignIn()}
+            >
+              Continue with Google
+            </button>
+            <div className="divider text-xs opacity-60">or</div>
             <form
               className="space-y-3"
               onSubmit={(event) => void handleAuthSubmit(event)}
