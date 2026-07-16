@@ -219,6 +219,18 @@ Phase 3 (extraction pipeline) is complete:
   only, never in any cloud data), and structured outputs constrain the model
   response to a fixed JSON schema. Invalid model values are dropped, not
   trusted.
+- Structured JSON import (`src/lib/extraction/json-import.ts`), for payslips
+  already parsed into salary-code lines by a third-party vision or OCR tool
+  rather than run through the free-text heuristics. Each line is classified by
+  its description against a fixed rule set (pay, PAYE, UIF, retirement,
+  employer medical, named allowances, non-tax deductions); an unrecognised
+  line is never dropped, it lands in a taxable-fringe-benefit or non-tax
+  catch-all and is flagged for review. A line posted on the opposite side of
+  its normal section (for example a PAYE correction under earnings) is
+  treated as a reversal against the running total rather than new income, and
+  a warning names the correction. An optional `tax_certificate` block in the
+  same JSON is cross-checked against the imported totals (gross income code
+  3699, PAYE code 4102), catching a missing or duplicated month.
 
 How it is tested: heuristics are covered by fixture payslips for same-line,
 bordered split-line, and termination layouts (the termination fixture asserts
@@ -228,7 +240,13 @@ direct-browser header, field mapping, invalid value rejection, key and rate
 limit errors, refusal handling). Upload page component tests drive paste
 analysis, row exclusion, saving into the store, and assert the consent gate:
 the send button stays disabled until both a key and explicit consent are
-given, and the cloud is never called without them.
+given, and the cloud is never called without them. The JSON importer has its
+own suite: field classification, the earnings-side PAYE correction case,
+duplicate-note flagging, an unresolvable period being skipped rather than
+guessed, unrecognised lines kept instead of dropped, and the tax certificate
+cross-check both matching and flagging a mismatch. Upload page tests cover
+parsing, previewing, importing into the store, and invalid JSON producing a
+readable error.
 
 Phase 2 (multi-source income model) is complete:
 
