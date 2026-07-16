@@ -97,6 +97,14 @@ segment, clamping for very high and zero incomes). Dashboard component tests
 cover the empty landing state and the populated dashboard (verdict, all four
 sections, marginal bracket text, deduction rows, year row).
 
+The provisional taxpayer warning on the Results page now names the IRP6
+payment dates (end of August and end of February) rather than only saying
+"verify your registration status with SARS", since the deadline is what a
+taxpayer flagged as likely provisional actually needs to act on.
+
+How it is tested: a Results page test drives non-PAYE income above the
+threshold and asserts the warning text includes both payment dates.
+
 Google sign-in was added alongside email/password auth: a "Continue with
 Google" button on the Account page (`src/lib/firebase/client.ts`,
 `signInWithGoogle`) using Firebase's `GoogleAuthProvider` and a popup flow.
