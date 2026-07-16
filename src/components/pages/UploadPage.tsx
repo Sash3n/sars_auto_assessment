@@ -4,6 +4,11 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { applySuggestionsToPayslip, mergeSuggestions } from "@/lib/extraction/apply";
 import { extractPayslipSuggestions } from "@/lib/extraction/heuristics";
+import {
+  crossCheckAgainstTaxCertificate,
+  importPayslipsFromJson,
+  type PayslipJsonImport,
+} from "@/lib/extraction/json-import";
 import { clearApiKey, loadApiKey, saveApiKey } from "@/lib/extraction/keyStore";
 import {
   ANTHROPIC_MODEL,
@@ -12,6 +17,7 @@ import {
 } from "@/lib/extraction/llm";
 import { extractPdfText, looksLikeScannedPdf } from "@/lib/extraction/pdf";
 import { extractImageText } from "@/lib/extraction/ocr";
+import type { Payslip } from "@/lib/model/types";
 import {
   confidenceLevel,
   type ExtractionOutcome,
@@ -84,6 +90,12 @@ export default function UploadPage() {
   const [cloudBusy, setCloudBusy] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const apiKeyInputRef = useRef<HTMLInputElement>(null);
+
+  const [jsonText, setJsonText] = useState("");
+  const [jsonError, setJsonError] = useState<string | null>(null);
+  const [jsonPayslips, setJsonPayslips] = useState<Payslip[]>([]);
+  const [jsonWarnings, setJsonWarnings] = useState<string[]>([]);
+  const [jsonSaved, setJsonSaved] = useState(false);
 
   // The consent modal closes on Escape and moves focus to the key field on
   // open, so the whole flow works from the keyboard.
@@ -187,6 +199,40 @@ export default function UploadPage() {
     }
   }
 
+  function handleParseJson() {
+    setJsonError(null);
+    setJsonSaved(false);
+    let parsed: PayslipJsonImport;
+    try {
+      parsed = JSON.parse(jsonText);
+    } catch {
+      setJsonError("That is not valid JSON. Check for a missing comma or bracket.");
+      setJsonPayslips([]);
+      setJsonWarnings([]);
+      return;
+    }
+    if (!Array.isArray(parsed?.payslips)) {
+      setJsonError('Expected a top-level "payslips" array.');
+      setJsonPayslips([]);
+      setJsonWarnings([]);
+      return;
+    }
+    const { payslips, warnings } = importPayslipsFromJson(parsed);
+    const crossCheck = crossCheckAgainstTaxCertificate(
+      payslips,
+      parsed.tax_certificate,
+    );
+    setJsonPayslips(payslips);
+    setJsonWarnings([...warnings, ...crossCheck.warnings]);
+  }
+
+  function handleJsonImport() {
+    for (const payslip of jsonPayslips) {
+      dispatch({ type: "upsertPayslip", payslip });
+    }
+    setJsonSaved(true);
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -256,6 +302,107 @@ export default function UploadPage() {
               </button>
             </div>
           </div>
+        </div>
+      </div>
+
+      <div className="card border border-base-300 bg-base-100 shadow-sm">
+        <div className="card-body">
+          <h3 className="card-title text-base">Or import structured payslip JSON</h3>
+          <p className="text-sm opacity-70">
+            For payslips already parsed into salary-code lines (for example by
+            a vision or OCR tool), paste the JSON here. Each line is
+            classified by its description; anything unrecognised is kept and
+            flagged for review rather than dropped. An optional
+            &quot;tax_certificate&quot; block is cross-checked against the
+            imported totals.
+          </p>
+          <textarea
+            className="textarea textarea-bordered min-h-28 w-full font-mono text-xs"
+            placeholder='{"payslips": [{"assumed_period": "March 2025", "earnings": [...], "deductions": [...]}]}'
+            aria-label="Pasted payslip JSON"
+            value={jsonText}
+            onChange={(event) => {
+              setJsonText(event.target.value);
+              setJsonSaved(false);
+            }}
+          />
+          <div className="card-actions justify-end">
+            <button
+              type="button"
+              className="btn btn-primary btn-sm"
+              disabled={jsonText.trim() === ""}
+              onClick={handleParseJson}
+            >
+              Parse JSON
+            </button>
+          </div>
+
+          {jsonError ? (
+            <div role="alert" className="alert alert-error">
+              <span>{jsonError}</span>
+            </div>
+          ) : null}
+
+          {jsonWarnings.length > 0 ? (
+            <ul className="space-y-1">
+              {jsonWarnings.map((warning) => (
+                <li key={warning} className="alert alert-warning py-2 text-sm">
+                  {warning}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+
+          {jsonPayslips.length > 0 ? (
+            <>
+              <div className="overflow-x-auto">
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>Month</th>
+                      <th>Employer</th>
+                      <th>Basic salary</th>
+                      <th>PAYE</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {jsonPayslips.map((slip) => (
+                      <tr key={slip.id} className="hover:bg-base-200">
+                        <td>{slip.periodMonth}</td>
+                        <td>{slip.employer || "—"}</td>
+                        <td className="currency">{formatRand(slip.basicSalary)}</td>
+                        <td className="currency">{formatRand(slip.paye)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="card-actions justify-end">
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={handleJsonImport}
+                >
+                  Import {jsonPayslips.length}{" "}
+                  {jsonPayslips.length === 1 ? "payslip" : "payslips"}
+                </button>
+              </div>
+            </>
+          ) : null}
+
+          {jsonSaved ? (
+            <div role="status" className="alert alert-success">
+              <span>
+                {jsonPayslips.length}{" "}
+                {jsonPayslips.length === 1 ? "payslip" : "payslips"} imported.
+                Review them on the{" "}
+                <Link href="/income" className="link">
+                  Income page
+                </Link>
+                .
+              </span>
+            </div>
+          ) : null}
         </div>
       </div>
 

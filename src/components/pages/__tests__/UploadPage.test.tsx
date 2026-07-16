@@ -133,3 +133,61 @@ describe("UploadPage", () => {
     expect(extractWithAnthropic).not.toHaveBeenCalled();
   });
 });
+
+const PAYSLIP_JSON = JSON.stringify({
+  payslips: [
+    {
+      assumed_period: "March 2025",
+      earnings: [{ salary_code: "0020*", description: "PAY", amount: 23_435.0 }],
+      deductions: [
+        { salary_code: "7910*", description: "PAYE RSA", amount: 5_392.17 },
+      ],
+    },
+  ],
+});
+
+describe("UploadPage, JSON import", () => {
+  it("parses pasted JSON and previews the resulting payslip", async () => {
+    const user = userEvent.setup();
+    renderWithStore(<UploadPage />);
+
+    await user.click(screen.getByLabelText("Pasted payslip JSON"));
+    await user.paste(PAYSLIP_JSON);
+    await user.click(screen.getByRole("button", { name: /parse json/i }));
+
+    expect(await screen.findByText("2025-03")).toBeInTheDocument();
+    expect(screen.getByText("R 23 435.00")).toBeInTheDocument();
+    expect(screen.getByText("R 5 392.17")).toBeInTheDocument();
+  });
+
+  it("imports the previewed payslip into the store", async () => {
+    const user = userEvent.setup();
+    renderWithStore(<UploadPage />);
+
+    await user.click(screen.getByLabelText("Pasted payslip JSON"));
+    await user.paste(PAYSLIP_JSON);
+    await user.click(screen.getByRole("button", { name: /parse json/i }));
+    await user.click(await screen.findByRole("button", { name: /import 1 payslip/i }));
+
+    expect(await screen.findByRole("status")).toHaveTextContent(/1 payslip imported/i);
+    const stored = JSON.parse(
+      window.localStorage.getItem(APP_DATA_STORAGE_KEY) ?? "{}",
+    );
+    const payslips = stored.years["2025-26"].payslips;
+    expect(payslips).toHaveLength(1);
+    expect(payslips[0].periodMonth).toBe("2025-03");
+    expect(payslips[0].basicSalary).toBe(23_435.0);
+    expect(payslips[0].paye).toBe(5_392.17);
+  });
+
+  it("shows an error for invalid JSON instead of a blank failure", async () => {
+    const user = userEvent.setup();
+    renderWithStore(<UploadPage />);
+
+    await user.click(screen.getByLabelText("Pasted payslip JSON"));
+    await user.paste("{ not valid json");
+    await user.click(screen.getByRole("button", { name: /parse json/i }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/not valid json/i);
+  });
+});
