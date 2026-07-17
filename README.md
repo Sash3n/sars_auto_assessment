@@ -77,6 +77,62 @@ basic amount is well below the current estimate, a null basic amount method
 when no prior year data is known, and both payments flooring at zero rather
 than going negative when PAYE already covers the estimated tax.
 
+The monthly PAYE estimator now uses SARS's cumulative "average" method for
+irregular pay periods:
+
+- `estimateMonthlyPayeCumulative` (`src/lib/tax-engine/monthly-paye.ts`)
+  annualises using earnings to date divided by periods elapsed, rather than
+  multiplying the current period alone by the periods remaining. A bonus or
+  once-off amount now only raises the estimate by its share of the year to
+  date, instead of being treated as if earned every period, which is what
+  the previous flat method did. The Income page's per-payslip estimate
+  (`estimatePayslipPaye` in `IncomePage.tsx`) now builds this history per
+  employer, in period order, up to and including the payslip being shown.
+- `estimateMonthlyPaye`, the simpler flat-period method, stays available for
+  callers without a full period history.
+- Deliberately out of scope: SARS also publishes fixed monthly PAYE
+  deduction tables that round to published brackets. The continuous formula
+  used here is a SARS-sanctioned alternative (Guide for Employers in respect
+  of Employees' Tax, PAYE-GEN-01-G04) that differs from the table method by
+  at most a few rand; transcribing and maintaining the actual table data was
+  judged not worth it for that small a gain.
+
+How it is tested: `src/lib/tax-engine/__tests__/monthly-paye.test.ts` adds a
+hand-computed six-months-flat-then-bonus scenario proving the cumulative
+estimate lands well below the flat method's overstatement for the bonus
+month, a flat-salary-all-year scenario proving the two methods converge when
+there is nothing irregular to smooth, a first-period scenario proving they
+match exactly when there is no prior history yet, and a rejection test for
+an empty period history.
+
+Calculation transparency is complete:
+
+- The Results page's tax calculation lines (normal tax before rebates,
+  rebates, both medical scheme credits) and the retirement deduction line now
+  have a "How was this calculated?" toggle that shows the formula applied and
+  the exact table values (rates, caps, published rand amounts) that were
+  used. The retirement deduction trace names which of the four section 11F
+  limits (contributions, annual cap, 27.5 percent of remuneration or taxable
+  income, taxable income before the deduction) was the binding cap, since
+  that was previously invisible.
+- The Compare page shows the same working next to mismatched lines (currently
+  the retirement deduction and the "assessed tax after rebates" summary row),
+  so a discrepancy against a real SARS assessment can be traced back to the
+  specific rate or cap that produced it, not just the delta.
+- Why: the app's value as a self-check tool depends on the user being able to
+  see why a figure differs from SARS's, not only that it differs.
+
+How it is tested: `src/lib/tax-engine/trace.ts` mirrors `assessment.ts`'s
+composition by calling the same underlying pure functions
+(`taxBeforeRebates`, `totalRebates`, `retirementDeduction`,
+`annualMedicalSchemeCredit`, `additionalMedicalCredit`), so there is no
+duplicated tax logic, only duplicated orchestration to also capture the
+working. `src/lib/tax-engine/__tests__/trace.test.ts` covers a plain
+tax-before-rebates scenario, an age 65+ rebate scenario, a medical scheme
+credit scenario, and retirement deduction scenarios asserting which of the
+four section 11F candidates is named as binding, plus cross-checks against
+`composeAssessment` for the same inputs.
+
 Phase 7 (design polish and accessibility) is complete:
 
 - Layout parity with the design reference: exact 280px sidebar, 1280px
