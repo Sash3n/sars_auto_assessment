@@ -126,12 +126,14 @@ describe("estimateMonthlyPaye", () => {
       },
       y2025,
     );
-    // Same annual remuneration (20 000 x 12 vs 5 000 x 52 = 260 000), close
-    // annual PAYE estimate; per-period figures differ by design.
-    expect(weekly.annualEquivalentRemuneration).toBeCloseTo(
-      20_000 * 12,
-      -3,
-    );
-    expect(monthly.monthlyPayeEstimate).not.toBe(weekly.monthlyPayeEstimate);
+    // Monthly: annual 240 000, tax 42 678 + 26% of 2 900 = 43 432, less
+    // rebate 17 235 = 26 197, monthly 2 183.08.
+    expect(monthly.annualPayeEstimate).toBe(26_197);
+    expect(monthly.monthlyPayeEstimate).toBe(2_183.08);
+    // Weekly: annual 260 000, tax 42 678 + 26% of 22 900 = 48 632, less
+    // rebate 17 235 = 31 397, weekly 603.79.
+    expect(weekly.annualEquivalentRemuneration).toBe((20_000 / 4) * 52);
+    expect(weekly.annualPayeEstimate).toBe(31_397);
+    expect(weekly.monthlyPayeEstimate).toBe(603.79);
   });
 });
