@@ -1,28 +1,62 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { formatRand } from "@/lib/format";
 import { useActiveYear } from "@/lib/store/StoreProvider";
 import { composeAssessment } from "@/lib/tax-engine/assessment";
 import { getTaxYear } from "@/lib/tax-engine/tax-tables";
+import { buildAssessmentTrace, type TraceStep } from "@/lib/tax-engine/trace";
 
 function AmountRow({
   description,
   amount,
   code,
   strong,
+  trace,
 }: {
   description: string;
   amount: number;
   code?: string;
   strong?: boolean;
+  trace?: TraceStep;
 }) {
+  const [expanded, setExpanded] = useState(false);
   return (
-    <tr className={strong ? "font-semibold" : "hover:bg-base-200"}>
-      <td className="w-20 font-mono text-xs opacity-60">{code ?? ""}</td>
-      <td>{description}</td>
-      <td className="currency text-right">{formatRand(amount)}</td>
-    </tr>
+    <>
+      <tr className={strong ? "font-semibold" : "hover:bg-base-200"}>
+        <td className="w-20 font-mono text-xs opacity-60">{code ?? ""}</td>
+        <td>
+          {description}
+          {trace ? (
+            <button
+              type="button"
+              onClick={() => setExpanded((value) => !value)}
+              className="ml-2 text-xs font-normal text-primary underline"
+            >
+              {expanded ? "Hide working" : "How was this calculated?"}
+            </button>
+          ) : null}
+        </td>
+        <td className="currency text-right">{formatRand(amount)}</td>
+      </tr>
+      {trace && expanded ? (
+        <tr>
+          <td />
+          <td colSpan={2} className="pb-3 text-xs opacity-80">
+            <p>{trace.formula}</p>
+            {Object.keys(trace.tableValuesUsed).length > 0 ? (
+              <p className="mt-1 opacity-60">
+                Table values used:{" "}
+                {Object.entries(trace.tableValuesUsed)
+                  .map(([key, value]) => `${key} = ${value}`)
+                  .join(", ")}
+              </p>
+            ) : null}
+          </td>
+        </tr>
+      ) : null}
+    </>
   );
 }
 
@@ -30,6 +64,21 @@ export default function ResultsPage() {
   const year = useActiveYear();
   const tables = getTaxYear(year.taxYearId);
   const assessment = composeAssessment(year, tables);
+  const trace = useMemo(
+    () => buildAssessmentTrace(year, tables),
+    [year, tables],
+  );
+  const traceByCode = useMemo(
+    () =>
+      new Map(
+        trace.filter((step) => step.code).map((step) => [step.code, step]),
+      ),
+    [trace],
+  );
+  const traceBySection = useMemo(
+    () => new Map(trace.map((step) => [step.section, step])),
+    [trace],
+  );
   const hasData = assessment.incomeTotal > 0;
   const refund = assessment.netAmount < 0;
 
@@ -103,7 +152,10 @@ export default function ResultsPage() {
                 Your non-PAYE income (interest, rental, freelance) suggests
                 you likely qualify as a provisional taxpayer, with IRP6
                 payments due at the end of August and February. Verify your
-                registration status with SARS.
+                registration status with SARS.{" "}
+                <Link href="/provisional" className="link link-primary">
+                  Calculate my IRP6 payments
+                </Link>
               </span>
             </div>
           ) : null}
@@ -152,6 +204,9 @@ export default function ResultsPage() {
                           code={line.code}
                           description={line.description}
                           amount={line.amount}
+                          trace={
+                            line.code ? traceByCode.get(line.code) : undefined
+                          }
                         />
                       ))}
                       <AmountRow
@@ -182,21 +237,29 @@ export default function ResultsPage() {
                     <AmountRow
                       description="Normal tax on taxable income"
                       amount={assessment.taxBeforeRebates}
+                      trace={traceBySection.get("brackets.taxBeforeRebates")}
                     />
                     <AmountRow
                       description={`Rebates (age ${assessment.age})`}
                       amount={-assessment.rebates}
+                      trace={traceBySection.get("rebates.totalRebates")}
                     />
                     {assessment.medicalSchemeCredit > 0 ? (
                       <AmountRow
                         description="Medical scheme fees tax credit (s6A)"
                         amount={-assessment.medicalSchemeCredit}
+                        trace={traceBySection.get(
+                          "medical.annualMedicalSchemeCredit",
+                        )}
                       />
                     ) : null}
                     {assessment.additionalMedicalCredit > 0 ? (
                       <AmountRow
                         description="Additional medical expenses credit (s6B)"
                         amount={-assessment.additionalMedicalCredit}
+                        trace={traceBySection.get(
+                          "medical.additionalMedicalCredit",
+                        )}
                       />
                     ) : null}
                     <AmountRow

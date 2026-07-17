@@ -41,9 +41,12 @@ exception. They bind human contributors and coding agents equally.
 ## Review
 
 - Extensive code review is required before merge to `dev`. At minimum, the
-  self-review checklist below is completed honestly in the PR description.
+  self-review checklist below is worked through and confirmed honestly before
+  requesting review. It is an internal process step, not PR content: verify
+  each item locally and note in the PR description only that the checklist
+  was completed, never paste the checklist itself into the public PR body.
 
-### PR review checklist (paste into every PR description)
+### PR review checklist (verify locally before requesting review, do not paste into the PR)
 
 - [ ] Tests added/updated for this change, and they fail without the change
 - [ ] `npm run lint`, `npm run typecheck`, `npm test`, `npm run build` all pass locally

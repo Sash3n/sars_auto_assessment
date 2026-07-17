@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { estimateMonthlyPaye } from "@/lib/tax-engine/monthly-paye";
+import {
+  estimateMonthlyPaye,
+  estimateMonthlyPayeCumulative,
+} from "@/lib/tax-engine/monthly-paye";
 import { getTaxYear } from "@/lib/tax-engine/tax-tables";
 
 const y2025 = getTaxYear("2025-26");
@@ -135,5 +138,91 @@ describe("estimateMonthlyPaye", () => {
     expect(weekly.annualEquivalentRemuneration).toBe((20_000 / 4) * 52);
     expect(weekly.annualPayeEstimate).toBe(31_397);
     expect(weekly.monthlyPayeEstimate).toBe(603.79);
+  });
+});
+
+describe("estimateMonthlyPayeCumulative", () => {
+  it("smooths a bonus month using the cumulative average method, well below the flat method's overstatement", () => {
+    // Six months flat 30 000, month 7 a 60 000 bonus on top of the usual
+    // 30 000 (period remuneration 90 000). Age 35, no retirement, no
+    // medical scheme.
+    const priorMonths = Array.from({ length: 6 }, () => ({
+      remuneration: 30_000,
+      retirementContributions: 0,
+    }));
+    const bonusMonth = { remuneration: 90_000, retirementContributions: 0 };
+
+    const cumulative = estimateMonthlyPayeCumulative(
+      [...priorMonths, bonusMonth],
+      35,
+      0,
+      y2025,
+    );
+    const flat = estimateMonthlyPaye(
+      {
+        monthlyRemuneration: 90_000,
+        monthlyRetirementContributions: 0,
+        age: 35,
+        medicalSchemePersonsCovered: 0,
+      },
+      y2025,
+    );
+
+    // Cumulative remuneration to date 270 000 over 7 periods annualises to
+    // 462 857.14, tax 105 992.71, less primary rebate 17 235: annual PAYE
+    // 88 757.71, cumulative tax due to date 51 775.33. The prior six months
+    // annualise to 360 000, tax 74 632, less rebate: annual PAYE 57 397,
+    // cumulative tax due 28 698.50. This period's PAYE is the difference.
+    expect(cumulative.monthlyPayeEstimate).toBeCloseTo(23_076.83, 2);
+    // The flat method treats 90 000 as if earned every month all year,
+    // landing in the top brackets and materially overstating the estimate.
+    expect(flat.monthlyPayeEstimate).toBeCloseTo(27_090.33, 2);
+    expect(cumulative.monthlyPayeEstimate).toBeLessThan(
+      flat.monthlyPayeEstimate,
+    );
+  });
+
+  it("matches the flat method for a regular salary with no irregular months", () => {
+    const months = Array.from({ length: 7 }, () => ({
+      remuneration: 30_000,
+      retirementContributions: 0,
+    }));
+    const cumulative = estimateMonthlyPayeCumulative(months, 35, 0, y2025);
+    const flat = estimateMonthlyPaye(
+      {
+        monthlyRemuneration: 30_000,
+        monthlyRetirementContributions: 0,
+        age: 35,
+        medicalSchemePersonsCovered: 0,
+      },
+      y2025,
+    );
+    expect(cumulative.monthlyPayeEstimate).toBeCloseTo(
+      flat.monthlyPayeEstimate,
+      2,
+    );
+  });
+
+  it("matches the flat method exactly for the first period, since there is nothing to average yet", () => {
+    const cumulative = estimateMonthlyPayeCumulative(
+      [{ remuneration: 40_000, retirementContributions: 5_000 }],
+      35,
+      1,
+      y2025,
+    );
+    const flat = estimateMonthlyPaye(
+      {
+        monthlyRemuneration: 40_000,
+        monthlyRetirementContributions: 5_000,
+        age: 35,
+        medicalSchemePersonsCovered: 1,
+      },
+      y2025,
+    );
+    expect(cumulative.monthlyPayeEstimate).toBe(flat.monthlyPayeEstimate);
+  });
+
+  it("rejects an empty period history", () => {
+    expect(() => estimateMonthlyPayeCumulative([], 35, 0, y2025)).toThrow();
   });
 });

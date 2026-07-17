@@ -15,6 +15,56 @@ import {
   formatObjectionSummaryText,
 } from "@/lib/tax-engine/objection";
 import { getTaxYear } from "@/lib/tax-engine/tax-tables";
+import { buildAssessmentTrace, type TraceStep } from "@/lib/tax-engine/trace";
+
+/*
+ * Not every comparison row maps to a single trace step: coded lines like
+ * retirement (4029) map directly, while summary rows like "Assessed tax
+ * after rebates" are the sum of several steps (tax, rebates, both medical
+ * credits). Mapping is by row identity, not automatic, since compare.ts's
+ * rows and trace.ts's steps are independently shaped.
+ */
+function traceForRow(row: ComparisonRow, trace: TraceStep[]): TraceStep[] {
+  if (row.code === "4029") {
+    return trace.filter((step) => step.code === "4029");
+  }
+  if (row.key === "assessedTaxAfterRebates") {
+    return trace.filter((step) =>
+      [
+        "brackets.taxBeforeRebates",
+        "rebates.totalRebates",
+        "medical.annualMedicalSchemeCredit",
+        "medical.additionalMedicalCredit",
+      ].includes(step.section),
+    );
+  }
+  return [];
+}
+
+function WhyRow({ steps }: { steps: TraceStep[] }) {
+  const [expanded, setExpanded] = useState(false);
+  if (steps.length === 0) {
+    return null;
+  }
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setExpanded((value) => !value)}
+        className="text-xs font-normal text-primary underline"
+      >
+        {expanded ? "Hide working" : "Why?"}
+      </button>
+      {expanded ? (
+        <div className="mt-1 space-y-1 text-xs opacity-80">
+          {steps.map((step) => (
+            <p key={step.section}>{step.label}: {step.formula}</p>
+          ))}
+        </div>
+      ) : null}
+    </>
+  );
+}
 
 function downloadTextFile(filename: string, content: string) {
   const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
@@ -45,6 +95,10 @@ export default function ComparePage() {
   const tables = getTaxYear(year.taxYearId);
   const assessment = useMemo(
     () => composeAssessment(year, tables),
+    [year, tables],
+  );
+  const trace = useMemo(
+    () => buildAssessmentTrace(year, tables),
     [year, tables],
   );
   const [pasted, setPasted] = useState("");
@@ -205,7 +259,14 @@ export default function ComparePage() {
                       <td className="font-mono text-xs opacity-60">
                         {row.code ?? ""}
                       </td>
-                      <td>{row.description}</td>
+                      <td>
+                        {row.description}
+                        {row.status === "mismatch" ? (
+                          <div>
+                            <WhyRow steps={traceForRow(row, trace)} />
+                          </div>
+                        ) : null}
+                      </td>
                       <td className="currency text-right">
                         {row.mineAmount === null
                           ? "not calculated"
