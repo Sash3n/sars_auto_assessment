@@ -5,13 +5,65 @@ import { useState } from "react";
 import CurrencyField from "@/components/fields/CurrencyField";
 import NamedAmountEditor from "@/components/fields/NamedAmountEditor";
 import { formatRand } from "@/lib/format";
-import { aggregatePayslips } from "@/lib/model/aggregate";
+import { aggregatePayslips, monthlySchemeHeadcount } from "@/lib/model/aggregate";
 import { emptyPayslip } from "@/lib/model/defaults";
 import { monthsOfTaxYear } from "@/lib/model/months";
-import type { Payslip } from "@/lib/model/types";
-import { sanitizeLabel } from "@/lib/model/validate";
+import type { Payslip, TaxYearData } from "@/lib/model/types";
+import { isIsoDate, sanitizeLabel } from "@/lib/model/validate";
 import { useActiveYear, useStore } from "@/lib/store/StoreProvider";
+import { estimateMonthlyPaye } from "@/lib/tax-engine/monthly-paye";
+import { ageAtTaxYearEnd } from "@/lib/tax-engine/rebates";
 import { getTaxYear } from "@/lib/tax-engine/tax-tables";
+import type { TaxYearTables } from "@/lib/tax-engine/types";
+
+/*
+ * Estimate this payslip's PAYE using the SARS annualisation formula method,
+ * so a captured payslip's actual PAYE can be sanity-checked against it. This
+ * is a per-payslip estimate assuming a regular month; it is not expected to
+ * match a bonus month or the exact SARS monthly deduction tables to the
+ * cent, see the caveats documented on estimateMonthlyPaye itself.
+ */
+function estimatePayslipPaye(
+  slip: Payslip,
+  year: TaxYearData,
+  tables: TaxYearTables,
+): number {
+  const age = isIsoDate(year.profile.dateOfBirth)
+    ? ageAtTaxYearEnd(year.profile.dateOfBirth, tables)
+    : 40;
+  const monthIndex = monthsOfTaxYear(tables).findIndex(
+    (month) => month.value === slip.periodMonth,
+  );
+  const headcounts = monthlySchemeHeadcount(year.profile, year.dependents);
+  const medicalSchemePersonsCovered =
+    monthIndex >= 0 ? headcounts[monthIndex] : 0;
+  const monthlyRemuneration =
+    slip.basicSalary +
+    slip.annualBonus +
+    slip.leavePay +
+    slip.allowances.reduce((total, item) => total + item.amount, 0) +
+    slip.otherFringeBenefits.reduce((total, item) => total + item.amount, 0) +
+    slip.employerMedicalAid +
+    slip.employerRetirement;
+  const monthlyRetirementContributions =
+    slip.employeeRetirement + slip.employerRetirement;
+
+  return estimateMonthlyPaye(
+    {
+      monthlyRemuneration,
+      monthlyRetirementContributions,
+      age,
+      medicalSchemePersonsCovered,
+    },
+    tables,
+  ).monthlyPayeEstimate;
+}
+
+/** Flag a variance worth a second look: more than R100 and more than 10 percent. */
+function isPayeVarianceNotable(actual: number, estimate: number): boolean {
+  const difference = Math.abs(actual - estimate);
+  return difference > 100 && difference > estimate * 0.1;
+}
 
 function PayslipForm({
   initial,
@@ -151,7 +203,8 @@ export default function IncomePage() {
   const year = useActiveYear();
   const [editing, setEditing] = useState<Payslip | null>(null);
   const totals = aggregatePayslips(year.payslips);
-  const months = monthsOfTaxYear(getTaxYear(state.activeTaxYearId));
+  const tables = getTaxYear(state.activeTaxYearId);
+  const months = monthsOfTaxYear(tables);
   const monthLabel = new Map(months.map((m) => [m.value, m.label]));
 
   const sorted = [...year.payslips].sort((a, b) =>
@@ -220,11 +273,15 @@ export default function IncomePage() {
                     <th>Employer</th>
                     <th className="text-right">Basic salary</th>
                     <th className="text-right">PAYE</th>
+                    <th className="text-right">Estimated PAYE</th>
                     <th aria-label="Actions" />
                   </tr>
                 </thead>
                 <tbody>
-                  {sorted.map((slip) => (
+                  {sorted.map((slip) => {
+                    const estimate = estimatePayslipPaye(slip, year, tables);
+                    const notable = isPayeVarianceNotable(slip.paye, estimate);
+                    return (
                     <tr key={slip.id} className="hover:bg-base-200">
                       <td>{monthLabel.get(slip.periodMonth) ?? slip.periodMonth}</td>
                       <td>{slip.employer}</td>
@@ -233,6 +290,17 @@ export default function IncomePage() {
                       </td>
                       <td className="currency text-right">
                         {formatRand(slip.paye)}
+                      </td>
+                      <td className="text-right">
+                        <span className="currency">{formatRand(estimate)}</span>
+                        {notable ? (
+                          <span
+                            className="badge badge-warning badge-sm ml-2 rounded-full"
+                            title="Actual PAYE differs from the estimate by more than R100 and 10 percent. This can be a genuine mismatch or just a bonus month, mid-year start, or a benefit that has not settled yet, see the estimate's caveats."
+                          >
+                            check
+                          </span>
+                        ) : null}
                       </td>
                       <td className="text-right">
                         <button
@@ -254,7 +322,8 @@ export default function IncomePage() {
                         </button>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
