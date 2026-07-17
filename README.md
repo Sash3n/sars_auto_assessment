@@ -43,6 +43,40 @@ The app runs at http://localhost:3000.
 
 ## Current state
 
+A provisional tax (IRP6) calculator is available at `/provisional`, linked
+from the Results page's provisional-taxpayer alert:
+
+- `calculateIrp6` (`src/lib/tax-engine/irp6.ts`) computes the first (31
+  August) and second (end of February) payments under both statutory
+  methods: the basic amount method (the taxpayer's most recently
+  SARS-assessed taxable income, uplifted 8 percent if that assessment is
+  more than 18 months old) and the estimated income method (this year's own
+  taxable income estimate from `composeAssessment`). Both payments assume
+  PAYE already withheld splits evenly across the year, since this app does
+  not track PAYE by half-year, disclosed as a simplification rather than
+  hidden.
+- The basic amount method needs the prior year's SARS-assessed taxable
+  income. If a prior tax year is captured in this app, its own calculated
+  taxable income is offered as a starting point, clearly labelled as an
+  estimate to override with the real assessed figure. Without that, the
+  field starts blank and the method reports "not available" rather than a
+  silent zero.
+- A warning appears when the basic amount sits materially below the current
+  year's own estimate, since a shortfall against the final assessed figure
+  can trigger underestimation penalty interest under section 89quat.
+- Out of scope for now: the voluntary third "top-up" payment (due about
+  seven months after year end, to stop interest accruing) is not
+  calculated, only the two statutory payments. No penalty rand figure is
+  computed either, since it depends on SARS's prescribed interest rate at
+  assessment date, which is not known in advance.
+
+How it is tested: `src/lib/tax-engine/__tests__/irp6.test.ts` covers the
+estimated income method's own numbers, the basic amount method with and
+without the 18-month uplift, the underestimation warning triggering when the
+basic amount is well below the current estimate, a null basic amount method
+when no prior year data is known, and both payments flooring at zero rather
+than going negative when PAYE already covers the estimated tax.
+
 Phase 7 (design polish and accessibility) is complete:
 
 - Layout parity with the design reference: exact 280px sidebar, 1280px
