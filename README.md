@@ -43,6 +43,34 @@ The app runs at http://localhost:3000.
 
 ## Current state
 
+Calculation transparency is complete:
+
+- The Results page's tax calculation lines (normal tax before rebates,
+  rebates, both medical scheme credits) and the retirement deduction line now
+  have a "How was this calculated?" toggle that shows the formula applied and
+  the exact table values (rates, caps, published rand amounts) that were
+  used. The retirement deduction trace names which of the four section 11F
+  limits (contributions, annual cap, 27.5 percent of remuneration or taxable
+  income, taxable income before the deduction) was the binding cap, since
+  that was previously invisible.
+- The Compare page shows the same working next to mismatched lines (currently
+  the retirement deduction and the "assessed tax after rebates" summary row),
+  so a discrepancy against a real SARS assessment can be traced back to the
+  specific rate or cap that produced it, not just the delta.
+- Why: the app's value as a self-check tool depends on the user being able to
+  see why a figure differs from SARS's, not only that it differs.
+
+How it is tested: `src/lib/tax-engine/trace.ts` mirrors `assessment.ts`'s
+composition by calling the same underlying pure functions
+(`taxBeforeRebates`, `totalRebates`, `retirementDeduction`,
+`annualMedicalSchemeCredit`, `additionalMedicalCredit`), so there is no
+duplicated tax logic, only duplicated orchestration to also capture the
+working. `src/lib/tax-engine/__tests__/trace.test.ts` covers a plain
+tax-before-rebates scenario, an age 65+ rebate scenario, a medical scheme
+credit scenario, and retirement deduction scenarios asserting which of the
+four section 11F candidates is named as binding, plus cross-checks against
+`composeAssessment` for the same inputs.
+
 Phase 7 (design polish and accessibility) is complete:
 
 - Layout parity with the design reference: exact 280px sidebar, 1280px
