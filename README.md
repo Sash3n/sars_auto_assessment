@@ -196,6 +196,33 @@ credits, result 15 840), plus refund, empty-year, missing-date-of-birth,
 carry-forward, and CGT scenarios. Component tests drive both pages, including
 the manual completion of a not-available SARS value flipping a row to match.
 
+Monthly PAYE estimator, added after Phase 4:
+
+- `src/lib/tax-engine/monthly-paye.ts`: estimates PAYE for one pay period
+  using the SARS employer annualisation formula method (Guide for Employers
+  in respect of Employees' Tax, PAYE-GEN-01-G04): the period's remuneration is
+  annualised, taxed with the same bracket, rebate, section 11F retirement
+  cap, and section 6A medical credit functions the annual assessment uses,
+  then divided back down to a per-period figure. The section 6B additional
+  medical credit is deliberately excluded, since SARS's monthly PAYE
+  calculation does not apply it, only annual assessment does. This is an
+  estimate: SARS's published monthly deduction tables round to fixed
+  brackets rather than using the continuous formula, and a bonus or other
+  irregular amount in the estimated period will overstate the annual
+  equivalent, since the cumulative "average" method payroll systems use to
+  smooth those months is not implemented.
+- Income page: each captured payslip shows this estimate alongside its actual
+  PAYE, with a badge when the two differ by more than R100 and 10 percent.
+  The badge is a prompt to look closer, not a verdict, a bonus month, a
+  mid-year start, or a benefit not yet settled can all produce a genuine gap
+  against a regular-month estimate.
+
+How it is tested: `monthly-paye.ts` was written test-first, with hand-computed
+reference scenarios (a regular month, the retirement cap engaging, the age-65
+secondary rebate, zero remuneration, medical credits exceeding tax, and an
+alternate pay frequency). Income page tests cover the estimate rendering
+alongside a mismatched and a matching actual PAYE figure.
+
 Phase 3 (extraction pipeline) is complete:
 
 - Local-first extraction (`src/lib/extraction/`): PDF text-layer reading via
