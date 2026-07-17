@@ -10,6 +10,10 @@ import {
   compareAssessments,
   type ComparisonRow,
 } from "@/lib/tax-engine/compare";
+import {
+  buildObjectionSummary,
+  formatObjectionSummaryText,
+} from "@/lib/tax-engine/objection";
 import { getTaxYear } from "@/lib/tax-engine/tax-tables";
 import { buildAssessmentTrace, type TraceStep } from "@/lib/tax-engine/trace";
 
@@ -60,6 +64,16 @@ function WhyRow({ steps }: { steps: TraceStep[] }) {
       ) : null}
     </>
   );
+}
+
+function downloadTextFile(filename: string, content: string) {
+  const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
 }
 
 function StatusBadge({ status }: { status: ComparisonRow["status"] }) {
@@ -136,6 +150,11 @@ export default function ComparePage() {
   }
 
   const mismatches = rows.filter((row) => row.status === "mismatch").length;
+  const objectionLines = useMemo(() => buildObjectionSummary(rows), [rows]);
+  const objectionText = useMemo(
+    () => formatObjectionSummaryText(objectionLines, tables.label),
+    [objectionLines, tables.label],
+  );
 
   return (
     <div className="space-y-6">
@@ -298,6 +317,48 @@ export default function ComparePage() {
               incorrectly, discrepancies can be disputed inside the
               40-business-day correction window.
             </p>
+          </div>
+        </section>
+      ) : null}
+
+      {objectionLines.length > 0 ? (
+        <section className="card border border-base-300 bg-base-100 shadow-sm print:border-none print:shadow-none">
+          <div className="card-body">
+            <div className="flex flex-wrap items-center justify-between gap-2 print:hidden">
+              <h3 className="card-title text-base">Objection summary</h3>
+              <button
+                type="button"
+                className="btn btn-sm"
+                onClick={() =>
+                  downloadTextFile(
+                    `objection-summary-${tables.id}.txt`,
+                    objectionText,
+                  )
+                }
+              >
+                Download summary (.txt)
+              </button>
+            </div>
+            <p className="text-sm opacity-70 print:hidden">
+              For your own reference when completing a Notice of Objection on
+              SARS eFiling. Not tax advice, not a submission, and not a
+              guarantee that SARS&apos;s figure is wrong, use it to check the
+              underlying documents before disputing anything.
+            </p>
+            <div className="space-y-4">
+              {objectionLines.map((line) => (
+                <div
+                  key={line.code ?? line.key ?? line.description}
+                  className="border-t border-base-300 pt-3 first:border-t-0 first:pt-0"
+                >
+                  <p className="font-mono text-xs opacity-60">
+                    {line.code ?? line.key ?? ""}
+                  </p>
+                  <p className="font-semibold">{line.description}</p>
+                  <p className="text-sm opacity-80">{line.reasoning}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </section>
       ) : null}

@@ -43,6 +43,33 @@ The app runs at http://localhost:3000.
 
 ## Current state
 
+The Compare page now offers an objection summary once a real SARS
+assessment is pasted and mismatches are found:
+
+- `buildObjectionSummary` (`src/lib/tax-engine/objection.ts`) is a plain
+  formatting layer over `compareAssessments`'s output, no new tax
+  calculation: it filters to mismatched rows and writes a plain-language
+  reasoning line for each (comparing the app's figure, SARS's figure, and
+  the delta, or stating clearly that the app did not calculate a code SARS
+  assessed, never fabricating a reason).
+- It is deliberately framed as "for your own reference when completing a
+  Notice of Objection on SARS eFiling", not a submission-ready objection
+  letter, since the app has no eFiling or SARS API integration (no server
+  routes exist by design) and cannot guarantee that SARS's figure is wrong.
+- Export is a plain-text `.txt` download (client-side `Blob`, no new
+  dependency) plus print-friendly styling, keeping with the app's
+  no-backend, nothing-leaves-the-browser stance. `formatObjectionSummaryText`
+  produces the exported text, stable in format since a taxpayer may paste it
+  directly into eFiling's free-text field.
+
+How it is tested: `src/lib/tax-engine/__tests__/objection.test.ts` covers a
+coded line mismatch with both amounts and the delta named, a summary row
+(keyed rather than coded) mismatch not getting dropped, a SARS-only code the
+app never calculated stating that plainly, matched and not-available rows
+being excluded entirely, and the exported text format including the tax
+year, code, and figures, plus a no-mismatches message when there is nothing
+to object to.
+
 A provisional tax (IRP6) calculator is available at `/provisional`, linked
 from the Results page's provisional-taxpayer alert:
 
