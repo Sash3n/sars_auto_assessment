@@ -43,6 +43,34 @@ The app runs at http://localhost:3000.
 
 ## Current state
 
+The monthly PAYE estimator now uses SARS's cumulative "average" method for
+irregular pay periods:
+
+- `estimateMonthlyPayeCumulative` (`src/lib/tax-engine/monthly-paye.ts`)
+  annualises using earnings to date divided by periods elapsed, rather than
+  multiplying the current period alone by the periods remaining. A bonus or
+  once-off amount now only raises the estimate by its share of the year to
+  date, instead of being treated as if earned every period, which is what
+  the previous flat method did. The Income page's per-payslip estimate
+  (`estimatePayslipPaye` in `IncomePage.tsx`) now builds this history per
+  employer, in period order, up to and including the payslip being shown.
+- `estimateMonthlyPaye`, the simpler flat-period method, stays available for
+  callers without a full period history.
+- Deliberately out of scope: SARS also publishes fixed monthly PAYE
+  deduction tables that round to published brackets. The continuous formula
+  used here is a SARS-sanctioned alternative (Guide for Employers in respect
+  of Employees' Tax, PAYE-GEN-01-G04) that differs from the table method by
+  at most a few rand; transcribing and maintaining the actual table data was
+  judged not worth it for that small a gain.
+
+How it is tested: `src/lib/tax-engine/__tests__/monthly-paye.test.ts` adds a
+hand-computed six-months-flat-then-bonus scenario proving the cumulative
+estimate lands well below the flat method's overstatement for the bonus
+month, a flat-salary-all-year scenario proving the two methods converge when
+there is nothing irregular to smooth, a first-period scenario proving they
+match exactly when there is no prior history yet, and a rejection test for
+an empty period history.
+
 Calculation transparency is complete:
 
 - The Results page's tax calculation lines (normal tax before rebates,
