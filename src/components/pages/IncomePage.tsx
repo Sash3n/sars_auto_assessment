@@ -11,17 +11,34 @@ import { monthsOfTaxYear } from "@/lib/model/months";
 import type { Payslip, TaxYearData } from "@/lib/model/types";
 import { isIsoDate, sanitizeLabel } from "@/lib/model/validate";
 import { useActiveYear, useStore } from "@/lib/store/StoreProvider";
-import { estimateMonthlyPaye } from "@/lib/tax-engine/monthly-paye";
+import { estimateMonthlyPayeCumulative } from "@/lib/tax-engine/monthly-paye";
 import { ageAtTaxYearEnd } from "@/lib/tax-engine/rebates";
 import { getTaxYear } from "@/lib/tax-engine/tax-tables";
 import type { TaxYearTables } from "@/lib/tax-engine/types";
 
+function payslipRemuneration(slip: Payslip): number {
+  return (
+    slip.basicSalary +
+    slip.annualBonus +
+    slip.leavePay +
+    slip.allowances.reduce((total, item) => total + item.amount, 0) +
+    slip.otherFringeBenefits.reduce((total, item) => total + item.amount, 0) +
+    slip.employerMedicalAid +
+    slip.employerRetirement
+  );
+}
+
+function payslipRetirementContributions(slip: Payslip): number {
+  return slip.employeeRetirement + slip.employerRetirement;
+}
+
 /*
- * Estimate this payslip's PAYE using the SARS annualisation formula method,
- * so a captured payslip's actual PAYE can be sanity-checked against it. This
- * is a per-payslip estimate assuming a regular month; it is not expected to
- * match a bonus month or the exact SARS monthly deduction tables to the
- * cent, see the caveats documented on estimateMonthlyPaye itself.
+ * Estimate this payslip's PAYE using SARS's cumulative "average" method, so
+ * a captured payslip's actual PAYE can be sanity-checked against it. The
+ * history is built per employer, since each employer's payroll system only
+ * ever averages its own periods, up to and including this payslip's month.
+ * This still is not expected to match the exact SARS monthly deduction
+ * tables to the cent, see the caveats documented on monthly-paye.ts.
  */
 function estimatePayslipPaye(
   slip: Payslip,
@@ -37,24 +54,23 @@ function estimatePayslipPaye(
   const headcounts = monthlySchemeHeadcount(year.profile, year.dependents);
   const medicalSchemePersonsCovered =
     monthIndex >= 0 ? headcounts[monthIndex] : 0;
-  const monthlyRemuneration =
-    slip.basicSalary +
-    slip.annualBonus +
-    slip.leavePay +
-    slip.allowances.reduce((total, item) => total + item.amount, 0) +
-    slip.otherFringeBenefits.reduce((total, item) => total + item.amount, 0) +
-    slip.employerMedicalAid +
-    slip.employerRetirement;
-  const monthlyRetirementContributions =
-    slip.employeeRetirement + slip.employerRetirement;
 
-  return estimateMonthlyPaye(
-    {
-      monthlyRemuneration,
-      monthlyRetirementContributions,
-      age,
-      medicalSchemePersonsCovered,
-    },
+  const history = year.payslips
+    .filter(
+      (candidate) =>
+        candidate.employer === slip.employer &&
+        candidate.periodMonth <= slip.periodMonth,
+    )
+    .sort((a, b) => a.periodMonth.localeCompare(b.periodMonth))
+    .map((candidate) => ({
+      remuneration: payslipRemuneration(candidate),
+      retirementContributions: payslipRetirementContributions(candidate),
+    }));
+
+  return estimateMonthlyPayeCumulative(
+    history,
+    age,
+    medicalSchemePersonsCovered,
     tables,
   ).monthlyPayeEstimate;
 }
