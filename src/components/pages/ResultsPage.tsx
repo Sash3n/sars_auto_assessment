@@ -103,7 +103,10 @@ export default function ResultsPage() {
                 Your non-PAYE income (interest, rental, freelance) suggests
                 you likely qualify as a provisional taxpayer, with IRP6
                 payments due at the end of August and February. Verify your
-                registration status with SARS.
+                registration status with SARS.{" "}
+                <Link href="/provisional" className="link link-primary">
+                  Calculate my IRP6 payments
+                </Link>
               </span>
             </div>
           ) : null}
