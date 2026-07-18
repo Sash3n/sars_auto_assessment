@@ -14,8 +14,10 @@ import {
  */
 
 describe("tax year registry", () => {
-  it("exposes both supported tax years", () => {
+  it("exposes all supported tax years", () => {
     const ids = listTaxYears().map((year) => year.id);
+    expect(ids).toContain("2023-24");
+    expect(ids).toContain("2024-25");
     expect(ids).toContain("2025-26");
     expect(ids).toContain("2026-27");
   });
@@ -31,6 +33,120 @@ describe("tax year registry", () => {
 
   it("defaults to the year currently being assessed", () => {
     expect(DEFAULT_TAX_YEAR_ID).toBe("2025-26");
+  });
+});
+
+describe("2023/24 tables", () => {
+  const tables = getTaxYear("2023-24");
+
+  it("covers 1 March 2023 to 29 February 2024", () => {
+    expect(tables.periodStart).toBe("2023-03-01");
+    expect(tables.periodEnd).toBe("2024-02-29");
+  });
+
+  it("has the published brackets, same as 2024/25 and 2025/26", () => {
+    expect(tables.brackets).toHaveLength(7);
+    expect(tables.brackets[0]).toMatchObject({ above: 0, base: 0, rate: 0.18 });
+    expect(tables.brackets[1]).toMatchObject({
+      above: 237_100,
+      base: 42_678,
+      rate: 0.26,
+    });
+    expect(tables.brackets[6]).toMatchObject({
+      above: 1_817_000,
+      base: 644_489,
+      rate: 0.45,
+    });
+  });
+
+  it("has the published rebates and thresholds", () => {
+    expect(tables.rebates).toEqual({
+      primary: 17_235,
+      secondary: 9_444,
+      tertiary: 3_145,
+    });
+    expect(tables.thresholds).toEqual({
+      under65: 95_750,
+      from65to74: 148_217,
+      from75: 165_689,
+    });
+  });
+
+  it("has the published credits, caps, and rates, with the year's own travel rate", () => {
+    expect(tables.medicalCredit).toEqual({
+      mainMemberMonthly: 364,
+      firstDependantMonthly: 364,
+      additionalDependantMonthly: 246,
+    });
+    expect(tables.retirement).toEqual({ rate: 0.275, annualCap: 350_000 });
+    expect(tables.interestExemption).toEqual({
+      under65: 23_800,
+      from65: 34_500,
+    });
+    expect(tables.travel.reimbursiveRatePerKm).toBe(4.64);
+    expect(tables.cgt).toEqual({
+      inclusionRate: 0.4,
+      annualExclusion: 40_000,
+      deathYearExclusion: 300_000,
+      primaryResidenceExclusion: 2_000_000,
+    });
+  });
+});
+
+describe("2024/25 tables", () => {
+  const tables = getTaxYear("2024-25");
+
+  it("covers 1 March 2024 to 28 February 2025", () => {
+    expect(tables.periodStart).toBe("2024-03-01");
+    expect(tables.periodEnd).toBe("2025-02-28");
+  });
+
+  it("has the published brackets, same as 2023/24 and 2025/26", () => {
+    expect(tables.brackets).toHaveLength(7);
+    expect(tables.brackets[0]).toMatchObject({ above: 0, base: 0, rate: 0.18 });
+    expect(tables.brackets[1]).toMatchObject({
+      above: 237_100,
+      base: 42_678,
+      rate: 0.26,
+    });
+    expect(tables.brackets[6]).toMatchObject({
+      above: 1_817_000,
+      base: 644_489,
+      rate: 0.45,
+    });
+  });
+
+  it("has the published rebates and thresholds", () => {
+    expect(tables.rebates).toEqual({
+      primary: 17_235,
+      secondary: 9_444,
+      tertiary: 3_145,
+    });
+    expect(tables.thresholds).toEqual({
+      under65: 95_750,
+      from65to74: 148_217,
+      from75: 165_689,
+    });
+  });
+
+  it("has the published credits, caps, and rates, with the year's own travel rate", () => {
+    expect(tables.medicalCredit).toEqual({
+      mainMemberMonthly: 364,
+      firstDependantMonthly: 364,
+      additionalDependantMonthly: 246,
+    });
+    expect(tables.retirement).toEqual({ rate: 0.275, annualCap: 350_000 });
+    expect(tables.interestExemption).toEqual({
+      under65: 23_800,
+      from65: 34_500,
+    });
+    expect(tables.travel.reimbursiveRatePerKm).toBe(4.84);
+    expect(tables.cgt).toEqual({
+      inclusionRate: 0.4,
+      annualExclusion: 40_000,
+      deathYearExclusion: 300_000,
+      primaryResidenceExclusion: 2_000_000,
+    });
   });
 });
 
