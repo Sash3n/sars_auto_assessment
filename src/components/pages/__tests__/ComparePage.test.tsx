@@ -89,7 +89,11 @@ describe("ComparePage", () => {
       "360000",
     );
 
-    const updatedRow = screen.getByText("Income, taxable").closest("tr")!;
+    // The row renders in the desktop table and again as a mobile card;
+    // scope the assertion to the table row.
+    const updatedRow = within(screen.getByRole("table"))
+      .getByText("Income, taxable")
+      .closest("tr")!;
     expect(within(updatedRow).getByText("match")).toBeInTheDocument();
   });
 });
