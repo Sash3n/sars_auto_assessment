@@ -43,6 +43,82 @@ The app runs at http://localhost:3000.
 
 ## Current state
 
+This round closes the remaining gaps between the original Stitch design
+mockups and the shipped app, and adds three genuinely new tax features.
+
+New tax engine capability (all rand-figure changes shipped test-first per
+the project's testing discipline):
+
+- **Travel allowance logbook deduction.** A new
+  `src/lib/tax-engine/travel.ts` implements the SARS deemed cost method:
+  the fixed cost for the vehicle value band divided by total kilometres,
+  plus the fuel and maintenance rates where the taxpayer bore those costs
+  in full, times logbook business kilometres, capped at the allowance
+  received. Every tax year table now carries its own SARS cost scale,
+  verified against the official PAYE-GEN-01-G03-A01 Rate per Kilometre
+  Schedule (revision 19, effective 1 March 2026) for 2026/27 and the SARS
+  eLogbook fixed cost tables for 2023/24, 2024/25, and 2025/26. Note the
+  2026/27 scale changed the value bands (R115,000 steps) and its open top
+  band has a different maintenance rate to the band below it.
+- **Area based home office deduction.** `src/lib/tax-engine/home-office.ts`
+  apportions the home's annual running costs by office floor area over
+  total floor area, added to directly claimable office expenses. The
+  deductions page captures both areas, shows the calculated office share
+  live, and notes SARS's exclusive-use requirement.
+- **Section 18A donations: itemisation and the 10 percent cap.** Donation
+  certificates can now be captured individually (summed with the flat
+  donations figure), and the assessment applies the section 18A cap of 10
+  percent of taxable income after other deductions, with a warning that
+  the excess carries forward. Previously donations were deducted uncapped,
+  which overstated large claims relative to what SARS would allow.
+- The new model fields (travel claim, home office areas, donation
+  certificates) are normalised into legacy stored data on load and on
+  cloud restore (`normalizeAppData` in `src/lib/model/defaults.ts`), so
+  existing local storage or encrypted backups keep working.
+
+Design gap closure across the app, per the Stitch mockups:
+
+- Shared UI primitives (`src/components/ui/`): a linked progress stepper
+  for the capture flow, a collapsible section with a summary figure, a
+  mobile sticky action bar pinned above the tab dock, and a twelve month
+  payslip coverage grid with an anomaly flag on months well above the
+  typical month.
+- Upload page: stepper and the month coverage grid.
+- Other income: each section is now a collapsible card with its net total
+  visible while collapsed, a combined other income summary card, the
+  freelance record keeping tip, and a sticky continue bar on mobile.
+- Deductions: stepper plus a live estimated impact panel (deductions
+  allowed, taxable income, estimated result) that updates as figures are
+  captured.
+- Results: the marginal rate bracket bar now renders on the results page
+  itself, and a mobile sticky bar keeps the estimated result, an export
+  action, and the compare link visible while the ledger scrolls.
+- Compare: a final outcome difference hero states in plain language whose
+  figure is more favourable and by how much, the line table is grouped
+  under Income, Deductions and allowances, and Tax liability and result
+  with an icon status legend and a SARS figure coverage count, and small
+  screens get a card per line instead of a horizontally scrolled table.
+- Export: browser print-to-PDF (no new dependency) with the navigation
+  chrome hidden and a print header on the results and compare pages, a
+  Web Share / clipboard summary share on compare, and a link to SARS
+  eFiling.
+
+How it is tested: failing-test-first commits cover the travel engine
+(`travel.test.ts`, reference values from the official SARS schedules), the
+home office apportionment (`home-office.test.ts`), the extended 2025/26
+assessment reference scenario including the donations cap and travel
+warnings (`assessment.test.ts`), and legacy data normalisation
+(`normalize.test.ts`). UI tests cover the new primitives, the travel and
+home office capture flows, donation certificates, and the redesigned
+compare table. The full suite, lint, typecheck, and build pass locally.
+
+Research links consulted: the SARS Rate per Kilometre Schedule
+(https://www.sars.gov.za/wp-content/uploads/Docs/PAYE/Tables/tables2026/PAYE-GEN-01-G03-A01-Rate-per-Kilometre-Schedule-External-Annexure.pdf),
+the SARS eLogbook pages for 2023/24 through 2025/26
+(https://www.sars.gov.za/wp-content/uploads/Docs/Logbook/2025-26-SARS-eLogbook.pdf),
+and the SARS rates per kilometre page
+(https://www.sars.gov.za/tax-rates/employers/rates-per-kilometre/).
+
 The dashboard and navigation now follow the original Stitch design reference
 more closely, and two pages that had no mobile-specific styling at all now
 adapt properly on small screens:
