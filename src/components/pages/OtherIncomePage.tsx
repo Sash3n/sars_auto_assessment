@@ -1,8 +1,12 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import CurrencyField from "@/components/fields/CurrencyField";
 import NamedAmountEditor from "@/components/fields/NamedAmountEditor";
+import Accordion from "@/components/ui/Accordion";
+import StickyActionBar from "@/components/ui/StickyActionBar";
+import Stepper from "@/components/ui/Stepper";
 import { formatRand } from "@/lib/format";
 import {
   netCapitalGains,
@@ -191,8 +195,15 @@ export default function OtherIncomePage() {
   const [editingDisposal, setEditingDisposal] =
     useState<CapitalDisposal | null>(null);
 
+  const rentalTotal = netRentalIncome(year.rentals);
+  const freelanceTotal = netFreelanceIncome(year.freelance);
+  const gainsTotal = netCapitalGains(year.disposals, tables);
+  const otherIncomeTotal =
+    rentalTotal + freelanceTotal + year.localInterest + gainsTotal;
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 pb-16 lg:pb-0">
+      <Stepper activeIndex={2} />
       <div>
         <h2 className="text-2xl font-bold tracking-tight">Other income</h2>
         <p className="mt-1 text-sm opacity-70">
@@ -201,11 +212,25 @@ export default function OtherIncomePage() {
         </p>
       </div>
 
-      <section className="space-y-4" aria-labelledby="rentals-heading">
-        <div className="flex items-center justify-between">
-          <h3 id="rentals-heading" className="text-lg font-semibold">
-            Rental properties
-          </h3>
+      <section className="card border border-base-300 bg-base-100 shadow-sm">
+        <div className="card-body flex-row flex-wrap items-center justify-between gap-2 py-4">
+          <p className="label-caps opacity-70">Total other income</p>
+          <p className="currency text-2xl font-semibold">
+            {formatRand(otherIncomeTotal)}
+          </p>
+          <p className="w-full text-xs opacity-60">
+            Before the interest exemption and the capital gains inclusion
+            rate, which the calculation applies automatically.
+          </p>
+        </div>
+      </section>
+
+      <Accordion
+        title="Rental properties"
+        summary={formatRand(rentalTotal)}
+        defaultOpen={year.rentals.length > 0}
+      >
+        <div className="flex items-center justify-end">
           <button
             type="button"
             className="btn btn-outline btn-sm"
@@ -275,13 +300,21 @@ export default function OtherIncomePage() {
             </span>
           </p>
         ) : null}
-      </section>
+      </Accordion>
 
-      <section className="space-y-4" aria-labelledby="freelance-heading">
-        <div className="flex items-center justify-between">
-          <h3 id="freelance-heading" className="text-lg font-semibold">
-            Freelance and side income
-          </h3>
+      <Accordion
+        title="Freelance and side income"
+        summary={formatRand(freelanceTotal)}
+        defaultOpen={year.freelance.length > 0}
+      >
+        <div className="alert alert-info text-sm">
+          <span>
+            SARS expects records for every freelance figure: keep all
+            invoices and expense receipts for a minimum of five years after
+            filing, in case of an audit.
+          </span>
+        </div>
+        <div className="flex items-center justify-end">
           <button
             type="button"
             className="btn btn-outline btn-sm"
@@ -372,12 +405,13 @@ export default function OtherIncomePage() {
             </span>
           </p>
         ) : null}
-      </section>
+      </Accordion>
 
-      <section className="space-y-4" aria-labelledby="investment-heading">
-        <h3 id="investment-heading" className="text-lg font-semibold">
-          Interest and dividends
-        </h3>
+      <Accordion
+        title="Interest and dividends"
+        summary={formatRand(year.localInterest + year.localDividends)}
+        defaultOpen={year.localInterest > 0 || year.localDividends > 0}
+      >
         <div className="grid gap-4 sm:grid-cols-2">
           <CurrencyField
             label="Local interest received"
@@ -396,13 +430,14 @@ export default function OtherIncomePage() {
             hint="Informational. Dividends tax is withheld at source."
           />
         </div>
-      </section>
+      </Accordion>
 
-      <section className="space-y-4" aria-labelledby="disposals-heading">
-        <div className="flex items-center justify-between">
-          <h3 id="disposals-heading" className="text-lg font-semibold">
-            Capital disposals
-          </h3>
+      <Accordion
+        title="Capital disposals"
+        summary={formatRand(gainsTotal)}
+        defaultOpen={year.disposals.length > 0}
+      >
+        <div className="flex items-center justify-end">
           <button
             type="button"
             className="btn btn-outline btn-sm"
@@ -480,7 +515,19 @@ export default function OtherIncomePage() {
             </span>
           </p>
         ) : null}
-      </section>
+      </Accordion>
+
+      <StickyActionBar>
+        <span className="text-sm">
+          Other income:{" "}
+          <span className="currency font-semibold">
+            {formatRand(otherIncomeTotal)}
+          </span>
+        </span>
+        <Link href="/deductions" className="btn btn-primary btn-sm">
+          Continue to deductions
+        </Link>
+      </StickyActionBar>
     </div>
   );
 }

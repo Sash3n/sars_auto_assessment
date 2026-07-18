@@ -209,7 +209,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
         >
           Skip to content
         </a>
-        <header className="sticky top-0 z-10 border-b border-base-300 bg-base-100">
+        <header className="sticky top-0 z-10 border-b border-base-300 bg-base-100 print:hidden">
           <div className="flex items-center gap-3 px-4 py-3">
             <label
               htmlFor="app-drawer"
@@ -241,11 +241,11 @@ export default function AppShell({ children }: { children: ReactNode }) {
         <main
           id="main-content"
           tabIndex={-1}
-          className="mx-auto w-full max-w-[1280px] flex-1 px-4 py-8 pb-24 outline-none lg:pb-8"
+          className="mx-auto w-full max-w-[1280px] flex-1 px-4 py-8 pb-24 outline-none lg:pb-8 print:pb-0"
         >
           {children}
         </main>
-        <footer className="hidden border-t border-base-300 bg-base-100 lg:block">
+        <footer className="hidden border-t border-base-300 bg-base-100 lg:block print:block">
           <div className="mx-auto w-full max-w-[1280px] px-4 py-6 text-sm opacity-70">
             <p>
               Not an official SARS application. For estimation purposes only.
@@ -253,7 +253,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
             <p>Not tax advice. Not affiliated with or endorsed by SARS.</p>
           </div>
         </footer>
-        <div className="border-t border-base-300 bg-base-100 pb-20 lg:hidden">
+        <div className="border-t border-base-300 bg-base-100 pb-20 lg:hidden print:hidden">
           <div className="px-4 py-4 text-xs opacity-70">
             <p>
               Not an official SARS application. For estimation purposes only.
@@ -263,7 +263,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
         </div>
         <nav
           aria-label="Quick navigation"
-          className="fixed inset-x-0 bottom-0 z-20 border-t border-base-300 bg-base-100 lg:hidden"
+          className="fixed inset-x-0 bottom-0 z-20 border-t border-base-300 bg-base-100 lg:hidden print:hidden"
         >
           <ul className="grid grid-cols-5">
             {DOCK_ITEMS.map((item) => (
@@ -285,7 +285,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
           </ul>
         </nav>
       </div>
-      <div className="drawer-side z-30">
+      <div className="drawer-side z-30 print:hidden">
         <label
           htmlFor="app-drawer"
           aria-label="Close navigation"

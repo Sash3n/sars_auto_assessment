@@ -149,3 +149,20 @@
     scroll-behavior: auto !important;
   }
 }
+
+/*
+ * Print styling for the Export PDF flow: browser print to PDF with the
+ * navigation chrome hidden (print:hidden utilities in components), a
+ * white page regardless of theme, and cards flattened for paper.
+ */
+@media print {
+  html,
+  body {
+    background: #ffffff !important;
+    color: #111111 !important;
+  }
+  .card {
+    box-shadow: none !important;
+    break-inside: avoid;
+  }
+}

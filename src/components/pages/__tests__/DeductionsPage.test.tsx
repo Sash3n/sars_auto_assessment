@@ -60,7 +60,9 @@ describe("DeductionsPage", () => {
     const user = userEvent.setup();
     renderWithStore(<DeductionsPage />);
 
-    const donations = screen.getByLabelText("Section 18A donations");
+    const donations = screen.getByLabelText(
+      "Donations without individual certificates",
+    );
     await user.type(donations, "5000");
     expect((donations as HTMLInputElement).value).toBe("5000");
 
@@ -69,5 +71,66 @@ describe("DeductionsPage", () => {
     );
     await user.type(carryForward, "15000");
     expect((carryForward as HTMLInputElement).value).toBe("15000");
+  });
+});
+
+describe("DeductionsPage travel and home office", () => {
+  it("computes the travel deduction preview from logbook inputs", async () => {
+    const user = userEvent.setup();
+    renderWithStore(<DeductionsPage />);
+
+    await user.type(
+      screen.getByLabelText("Travel allowance received for the year"),
+      "60000",
+    );
+    await user.type(screen.getByLabelText("Vehicle value"), "250000");
+    await user.type(
+      screen.getByLabelText("Total kilometres for the year"),
+      "30000",
+    );
+    await user.type(
+      screen.getByLabelText("Business kilometres from the logbook"),
+      "10000",
+    );
+    // 87 497 / 30 000 + 1.779 + 0.654 = R5.35/km, times 10 000 km.
+    expect(screen.getByText(/R 5\.35\/km/)).toBeInTheDocument();
+    expect(screen.getByText("R 53 495.67")).toBeInTheDocument();
+  });
+
+  it("shows the area based home office share", async () => {
+    const user = userEvent.setup();
+    renderWithStore(<DeductionsPage />);
+
+    await user.type(
+      screen.getByLabelText("Office area in square metres"),
+      "12",
+    );
+    await user.type(
+      screen.getByLabelText("Total home area in square metres"),
+      "150",
+    );
+    await user.type(
+      screen.getByLabelText("Annual home running costs"),
+      "50000",
+    );
+    expect(screen.getByText("8.00%")).toBeInTheDocument();
+    expect(screen.getByText("R 4 000.00")).toBeInTheDocument();
+  });
+
+  it("captures itemised donation certificates", async () => {
+    const user = userEvent.setup();
+    renderWithStore(<DeductionsPage />);
+
+    await user.click(
+      screen.getByRole("button", { name: /add certificate/i }),
+    );
+    await user.type(
+      screen.getByLabelText(
+        "Donation certificates (section 18A) description",
+      ),
+      "SPCA",
+    );
+    await user.type(screen.getByLabelText("Amount"), "1200");
+    expect(screen.getByDisplayValue("SPCA")).toBeInTheDocument();
   });
 });

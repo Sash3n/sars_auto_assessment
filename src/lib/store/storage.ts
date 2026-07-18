@@ -1,4 +1,4 @@
-import { emptyAppData } from "@/lib/model/defaults";
+import { emptyAppData, normalizeAppData } from "@/lib/model/defaults";
 import type { AppData } from "@/lib/model/types";
 
 /*
@@ -25,7 +25,7 @@ export function loadAppData(): AppData {
     ) {
       return emptyAppData();
     }
-    return parsed as AppData;
+    return normalizeAppData(parsed as AppData);
   } catch {
     return emptyAppData();
   }

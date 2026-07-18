@@ -65,9 +65,10 @@ describe("deductionBreakdown", () => {
     const assessment = composeAssessment(year, y2025);
     const slices = deductionBreakdown(assessment);
     expect(slices).toHaveLength(3);
+    // Line order: retirement, home office, donations.
     expect(slices[0]).toMatchObject({ amount: 60_000, percent: 60 });
-    expect(slices[1]).toMatchObject({ amount: 30_000, percent: 30 });
-    expect(slices[2]).toMatchObject({ amount: 10_000, percent: 10 });
+    expect(slices[1]).toMatchObject({ amount: 10_000, percent: 10 });
+    expect(slices[2]).toMatchObject({ amount: 30_000, percent: 30 });
   });
 
   it("is empty when there are no deductions", () => {
