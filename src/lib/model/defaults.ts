@@ -7,6 +7,7 @@ import type {
   RentalProperty,
   TaxpayerProfile,
   TaxYearData,
+  TravelClaim,
 } from "./types";
 
 export function emptyProfile(): TaxpayerProfile {
@@ -18,7 +19,22 @@ export function emptyProfile(): TaxpayerProfile {
     qualifyingMedicalExpenses: 0,
     privateRetirementContributions: 0,
     donations: 0,
+    donationCertificates: [],
     homeOfficeExpenses: 0,
+    homeOfficeAreaM2: 0,
+    homeTotalAreaM2: 0,
+    homeOfficeRunningCosts: 0,
+  };
+}
+
+export function emptyTravelClaim(): TravelClaim {
+  return {
+    allowanceReceived: 0,
+    totalKm: 0,
+    businessKm: 0,
+    vehicleValue: 0,
+    paidFullFuel: true,
+    paidFullMaintenance: true,
   };
 }
 
@@ -33,8 +49,32 @@ export function emptyYear(taxYearId: string): TaxYearData {
     dependents: [],
     localInterest: 0,
     localDividends: 0,
+    travel: emptyTravelClaim(),
     carryForward: { retirementExcessPrior: 0 },
   };
+}
+
+/*
+ * Data saved by earlier app versions predates newer model fields.
+ * Layering every stored year over the empty defaults guarantees the tax
+ * engine never sees undefined, whether the data came from local storage
+ * or a decrypted cloud backup.
+ */
+export function normalizeAppData(data: AppData): AppData {
+  const years: Record<string, TaxYearData> = {};
+  for (const [taxYearId, year] of Object.entries(data.years)) {
+    years[taxYearId] = {
+      ...emptyYear(taxYearId),
+      ...year,
+      profile: { ...emptyProfile(), ...year.profile },
+      travel: { ...emptyTravelClaim(), ...year.travel },
+      carryForward: {
+        retirementExcessPrior: 0,
+        ...year.carryForward,
+      },
+    };
+  }
+  return { ...data, years };
 }
 
 export function emptyAppData(): AppData {

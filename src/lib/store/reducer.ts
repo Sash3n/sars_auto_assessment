@@ -1,4 +1,4 @@
-import { emptyAppData, emptyYear } from "@/lib/model/defaults";
+import { emptyAppData, emptyYear, normalizeAppData } from "@/lib/model/defaults";
 import type {
   AppData,
   CapitalDisposal,
@@ -8,6 +8,7 @@ import type {
   RentalProperty,
   TaxpayerProfile,
   TaxYearData,
+  TravelClaim,
 } from "@/lib/model/types";
 
 export type StoreAction =
@@ -27,6 +28,7 @@ export type StoreAction =
   | { type: "setLocalInterest"; amount: number }
   | { type: "setLocalDividends"; amount: number }
   | { type: "setRetirementExcessPrior"; amount: number }
+  | { type: "updateTravel"; patch: Partial<TravelClaim> }
   | { type: "resetYear" };
 
 function upsertById<T extends { id: string }>(list: T[], item: T): T[] {
@@ -55,7 +57,7 @@ function withActiveYear(
 export function storeReducer(state: AppData, action: StoreAction): AppData {
   switch (action.type) {
     case "hydrate":
-      return action.data;
+      return normalizeAppData(action.data);
     case "setActiveYear": {
       const years = state.years[action.taxYearId]
         ? state.years
@@ -133,6 +135,11 @@ export function storeReducer(state: AppData, action: StoreAction): AppData {
       return withActiveYear(state, (year) => ({
         ...year,
         localDividends: action.amount,
+      }));
+    case "updateTravel":
+      return withActiveYear(state, (year) => ({
+        ...year,
+        travel: { ...year.travel, ...action.patch },
       }));
     case "setRetirementExcessPrior":
       return withActiveYear(state, (year) => ({

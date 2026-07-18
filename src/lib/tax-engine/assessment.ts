@@ -10,7 +10,9 @@ import type { TaxYearData } from "@/lib/model/types";
 import { isIsoDate } from "@/lib/model/validate";
 import { taxBeforeRebates } from "./brackets";
 import { taxableCapitalGain } from "./cgt";
+import { homeOfficeDeduction } from "./home-office";
 import { splitExemptInterest } from "./interest";
+import { travelDeduction } from "./travel";
 import {
   additionalMedicalCredit,
   annualMedicalSchemeCredit,
@@ -214,23 +216,81 @@ export function composeAssessment(
       `Retirement contributions of R ${retirement.carriedForward.toFixed(2)} exceed this year's limit and carry forward to next year, they are not lost.`,
     );
   }
-  const otherDeductions = roundToCent(
-    year.profile.donations + year.profile.homeOfficeExpenses,
-  );
-  if (year.profile.donations > 0) {
+  const travelClaim = year.travel ?? {
+    allowanceReceived: 0,
+    totalKm: 0,
+    businessKm: 0,
+    vehicleValue: 0,
+    paidFullFuel: true,
+    paidFullMaintenance: true,
+  };
+  const travel = travelDeduction(travelClaim, tables);
+  if (travel.allowed > 0) {
     deductionLines.push({
-      description: "Section 18A donations",
-      amount: -year.profile.donations,
+      description: "Travel expenses against allowance (logbook)",
+      amount: -travel.allowed,
     });
+    if (travel.deemedCost > travel.allowed) {
+      warnings.push(
+        `The deemed travel cost of R ${travel.deemedCost.toFixed(2)} exceeds the allowance received, so the travel deduction is capped at R ${travel.allowed.toFixed(2)}.`,
+      );
+    }
+  } else if (travelClaim.allowanceReceived > 0) {
+    warnings.push(
+      "A travel allowance is captured but the logbook details (kilometres and vehicle value) are incomplete, so no travel deduction is claimed.",
+    );
   }
-  if (year.profile.homeOfficeExpenses > 0) {
+
+  const homeOffice = homeOfficeDeduction({
+    directExpenses: year.profile.homeOfficeExpenses,
+    runningCosts: year.profile.homeOfficeRunningCosts ?? 0,
+    officeAreaM2: year.profile.homeOfficeAreaM2 ?? 0,
+    homeAreaM2: year.profile.homeTotalAreaM2 ?? 0,
+  });
+  if (homeOffice.total > 0) {
     deductionLines.push({
       description: "Home office expenses",
-      amount: -year.profile.homeOfficeExpenses,
+      amount: -homeOffice.total,
     });
   }
 
-  const deductionsTotal = roundToCent(retirement.allowed + otherDeductions);
+  /*
+   * Section 18A caps the donations deduction at 10 percent of taxable
+   * income after every other deduction but before the donations deduction
+   * itself. The disallowed excess carries forward to the next year.
+   */
+  const donationsClaimed = roundToCent(
+    year.profile.donations +
+      (year.profile.donationCertificates ?? []).reduce(
+        (total, certificate) => total + certificate.amount,
+        0,
+      ),
+  );
+  const donationsBase = roundToCent(
+    Math.max(
+      0,
+      incomeTotal - retirement.allowed - travel.allowed - homeOffice.total,
+    ),
+  );
+  const donationsCap = roundToCent(donationsBase * 0.1);
+  const donationsAllowed = roundToCent(
+    Math.min(donationsClaimed, donationsCap),
+  );
+  if (donationsAllowed > 0) {
+    deductionLines.push({
+      description: "Section 18A donations",
+      amount: -donationsAllowed,
+    });
+  }
+  if (donationsClaimed > donationsAllowed) {
+    warnings.push(
+      `Section 18A donations of R ${donationsClaimed.toFixed(2)} exceed the 10 percent of taxable income limit of R ${donationsCap.toFixed(2)}. The excess carries forward to next year, it is not lost.`,
+    );
+  }
+
+  const deductionsTotal = roundToCent(
+    retirement.allowed + travel.allowed + homeOffice.total + donationsAllowed,
+  );
   const taxableIncome = roundToCent(Math.max(0, incomeTotal - deductionsTotal));
 
   const grossTax = taxBeforeRebates(taxableIncome, tables);

@@ -98,10 +98,34 @@ export interface TaxpayerProfile {
   qualifyingMedicalExpenses: number;
   /** Private retirement annuity contributions not on any payslip. */
   privateRetirementContributions: number;
-  /** Section 18A donations with receipts. */
+  /** Section 18A donations without individually captured certificates. */
   donations: number;
-  /** Home office expenses claimed. */
+  /** Individually captured section 18A donation certificates. */
+  donationCertificates: NamedAmount[];
+  /** Directly claimable home office expenses (repairs to the office itself). */
   homeOfficeExpenses: number;
+  /** Dedicated home office floor area in square metres. */
+  homeOfficeAreaM2: number;
+  /** Total floor area of the home in square metres. */
+  homeTotalAreaM2: number;
+  /**
+   * Annual running costs of the whole home (rent or bond interest, rates,
+   * electricity, cleaning), apportioned by floor area.
+   */
+  homeOfficeRunningCosts: number;
+}
+
+export interface TravelClaim {
+  /** Travel allowance received for the year, IRP5 code 3701. */
+  allowanceReceived: number;
+  /** Total kilometres travelled in the year, business and private. */
+  totalKm: number;
+  /** Business kilometres from the logbook. */
+  businessKm: number;
+  /** Vehicle cost including VAT, excluding finance charges. */
+  vehicleValue: number;
+  paidFullFuel: boolean;
+  paidFullMaintenance: boolean;
 }
 
 export interface CarryForward {
@@ -124,6 +148,8 @@ export interface TaxYearData {
    * source and local dividends are exempt from normal tax.
    */
   localDividends: number;
+  /** Travel allowance logbook claim for the deemed cost deduction. */
+  travel: TravelClaim;
   carryForward: CarryForward;
 }
 
