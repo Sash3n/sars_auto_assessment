@@ -1,10 +1,16 @@
 "use client";
 
+import Link from "next/link";
 import CurrencyField from "@/components/fields/CurrencyField";
+import StickyActionBar from "@/components/ui/StickyActionBar";
+import Stepper from "@/components/ui/Stepper";
+import { formatRand } from "@/lib/format";
 import { emptyDependent } from "@/lib/model/defaults";
 import type { Dependent, DependentRelationship } from "@/lib/model/types";
 import { clampMonths, isIsoDate } from "@/lib/model/validate";
 import { useActiveYear, useStore } from "@/lib/store/StoreProvider";
+import { composeAssessment } from "@/lib/tax-engine/assessment";
+import { getTaxYear } from "@/lib/tax-engine/tax-tables";
 
 const RELATIONSHIPS: { value: DependentRelationship; label: string }[] = [
   { value: "spouse", label: "Spouse" },
@@ -108,9 +114,14 @@ export default function DeductionsPage() {
   const { dispatch } = useStore();
   const year = useActiveYear();
   const { profile } = year;
+  const tables = getTaxYear(year.taxYearId);
+  const assessment = composeAssessment(year, tables);
+  const hasData = assessment.incomeTotal > 0;
+  const refund = assessment.netAmount < 0;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 pb-16 lg:pb-0">
+      <Stepper activeIndex={3} />
       <div>
         <h2 className="text-2xl font-bold tracking-tight">
           Deductions and household
@@ -120,6 +131,43 @@ export default function DeductionsPage() {
           drive the medical scheme fees credit.
         </p>
       </div>
+
+      {hasData ? (
+        <section
+          className="card border border-base-300 bg-base-200/50"
+          aria-labelledby="impact-heading"
+        >
+          <div className="card-body flex-row flex-wrap items-center gap-x-8 gap-y-2 py-4">
+            <h3 id="impact-heading" className="label-caps w-full opacity-70">
+              Estimated impact as you capture
+            </h3>
+            <div>
+              <p className="label-caps opacity-60">Deductions allowed</p>
+              <p className="currency font-semibold">
+                {formatRand(assessment.deductionsTotal)}
+              </p>
+            </div>
+            <div>
+              <p className="label-caps opacity-60">Taxable income</p>
+              <p className="currency font-semibold">
+                {formatRand(assessment.taxableIncome)}
+              </p>
+            </div>
+            <div>
+              <p className="label-caps opacity-60">Estimated result</p>
+              <p
+                className={`currency font-semibold ${
+                  refund ? "text-primary" : "text-error"
+                }`}
+              >
+                {refund
+                  ? `${formatRand(Math.abs(assessment.netAmount))} refund`
+                  : `${formatRand(assessment.netAmount)} owed`}
+              </p>
+            </div>
+          </div>
+        </section>
+      ) : null}
 
       <section
         className="card border border-base-300 bg-base-100 shadow-sm"
@@ -319,6 +367,24 @@ export default function DeductionsPage() {
           </p>
         )}
       </section>
+
+      {hasData ? (
+        <StickyActionBar>
+          <span className="text-sm">
+            {refund ? "Refund: " : "Owed: "}
+            <span
+              className={`currency font-semibold ${
+                refund ? "text-primary" : "text-error"
+              }`}
+            >
+              {formatRand(Math.abs(assessment.netAmount))}
+            </span>
+          </span>
+          <Link href="/results" className="btn btn-primary btn-sm">
+            View results
+          </Link>
+        </StickyActionBar>
+      ) : null}
     </div>
   );
 }
