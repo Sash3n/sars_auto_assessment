@@ -1,0 +1,168 @@
+@import "tailwindcss";
+
+/*
+ * DaisyUI themes derived from the Stitch design reference
+ * (docs/design/stitch/, gitignored). Both modes use the Stitch palette:
+ * emerald primary for refunds and positive outcomes, slate secondary for
+ * UI chrome, amber for anomalies and deadlines, red reserved for amounts
+ * owed to SARS and critical errors. Surfaces follow the reference's tonal
+ * layering: white cards on a faintly violet-tinted off-white background in
+ * light mode, and the same layering inverted onto deep slate-blue in dark
+ * mode, anchored on the reference's inverse-surface tokens.
+ */
+@plugin "daisyui" {
+  themes: false;
+  logs: false;
+}
+
+@plugin "daisyui/theme" {
+  name: "light";
+  default: true;
+  prefersdark: false;
+  color-scheme: light;
+
+  --color-base-100: #ffffff;
+  --color-base-200: #faf8ff;
+  --color-base-300: #eaedff;
+  --color-base-content: #131b2e;
+  --color-primary: #006c49;
+  --color-primary-content: #ffffff;
+  --color-secondary: #515f74;
+  --color-secondary-content: #ffffff;
+  --color-accent: #10b981;
+  --color-accent-content: #00422b;
+  --color-neutral: #283044;
+  --color-neutral-content: #eef0ff;
+  --color-info: #415f91;
+  --color-info-content: #ffffff;
+  --color-success: #006c49;
+  --color-success-content: #ffffff;
+  --color-warning: #e29100;
+  --color-warning-content: #2a1700;
+  --color-error: #ba1a1a;
+  --color-error-content: #ffffff;
+
+  --radius-selector: 0.5rem;
+  --radius-field: 0.5rem;
+  --radius-box: 1rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
+
+  /*
+   * Chart series colors, brand-family variants validated for lightness,
+   * chroma, CVD separation, and surface contrast on this theme's surface.
+   * Fixed assignment order: 1 income/retirement, 2 PAYE/donations, 3 other.
+   */
+  --chart-1: #006c49;
+  --chart-2: #2f5fa8;
+  --chart-3: #a86a00;
+}
+
+@plugin "daisyui/theme" {
+  name: "dark";
+  default: false;
+  prefersdark: true;
+  color-scheme: dark;
+
+  --color-base-100: #182136;
+  --color-base-200: #0f1626;
+  --color-base-300: #283044;
+  --color-base-content: #eef0ff;
+  --color-primary: #4edea3;
+  --color-primary-content: #002113;
+  --color-secondary: #b9c7e0;
+  --color-secondary-content: #0d1c2f;
+  --color-accent: #10b981;
+  --color-accent-content: #002113;
+  --color-neutral: #3a485c;
+  --color-neutral-content: #eef0ff;
+  --color-info: #aac7ff;
+  --color-info-content: #0d1c2f;
+  --color-success: #4edea3;
+  --color-success-content: #002113;
+  --color-warning: #ffb95f;
+  --color-warning-content: #2a1700;
+  --color-error: #ffb4ab;
+  --color-error-content: #690005;
+
+  --radius-selector: 0.5rem;
+  --radius-field: 0.5rem;
+  --radius-box: 1rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
+
+  /* Chart series colors validated against this theme's dark surface. */
+  --chart-1: #0daf7a;
+  --chart-2: #5b8def;
+  --chart-3: #cd7f16;
+}
+
+@theme inline {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, "SFMono-Regular",
+    monospace;
+}
+
+/*
+ * Currency values use JetBrains Mono with tabular figures so rand amounts
+ * align when stacked, per the design reference's formatting rules.
+ */
+@utility currency {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * Small uppercase labels used for form labels and card eyebrows,
+ * the reference's "label-caps" text style.
+ */
+@utility label-caps {
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/*
+ * Focus per the design reference: a 2px primary ring, no size change.
+ */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Respect the user's motion preference across the whole app. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/*
+ * Print styling for the Export PDF flow: browser print to PDF with the
+ * navigation chrome hidden (print:hidden utilities in components), a
+ * white page regardless of theme, and cards flattened for paper.
+ */
+@media print {
+  html,
+  body {
+    background: #ffffff !important;
+    color: #111111 !important;
+  }
+  .card {
+    box-shadow: none !important;
+    break-inside: avoid;
+  }
+}
