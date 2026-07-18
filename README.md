@@ -43,6 +43,30 @@ The app runs at http://localhost:3000.
 
 ## Current state
 
+Two earlier tax years are now selectable: 2023/24 and 2024/25, alongside
+the existing 2025/26 (default) and 2026/27.
+
+- `src/lib/tax-engine/tax-tables/year-2023-24.ts` and `year-2024-25.ts`
+  follow the existing pattern: a versioned config file, never an edit to an
+  existing year. Brackets, rebates, thresholds, and medical credits are
+  identical across 2023/24, 2024/25, and 2025/26, a three-year bracket
+  freeze confirmed against SARS's published archive rates (only the
+  reimbursive travel rate per kilometre actually changes year to year:
+  R4.64/km for 2023/24, R4.84/km for 2024/25, verified against SARS's
+  PAYE-GEN-01-G03-A01 rate schedule rather than assumed).
+- The retirement fund contribution deduction cap is R350,000 for both new
+  years, confirmed unchanged until the R430,000 cap that starts in 2026/27.
+- No UI changes needed: the tax year selector already lists whatever
+  `listTaxYears()` returns, so both years appear automatically.
+
+How it is tested: `src/lib/tax-engine/__tests__/tax-tables.test.ts` adds a
+dedicated describe block per new year (period dates, brackets, rebates,
+thresholds, medical credits, retirement cap, interest exemption, CGT
+figures, and the year's own travel rate), and the existing
+`it.each(listTaxYears())` integrity invariants (bracket continuity, sorted
+ascending rates, threshold-matches-rebate) automatically extend to cover
+them with no test changes required.
+
 The structured JSON payslip import fixes two real-world gaps found against
 an actual vision-extracted payslip batch:
 
