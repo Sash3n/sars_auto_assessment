@@ -180,7 +180,7 @@ export default function ComparePage() {
             value={pasted}
             onChange={(event) => setPasted(event.target.value)}
           />
-          <div className="card-actions items-end justify-between">
+          <div className="card-actions flex-col items-stretch justify-between sm:flex-row sm:items-end">
             <label className="form-control">
               <span className="label-caps mb-1 block opacity-70">
                 Mismatch threshold (rand)
@@ -189,7 +189,7 @@ export default function ComparePage() {
                 type="number"
                 min={0}
                 step={1}
-                className="input input-bordered input-sm w-36"
+                className="input input-bordered input-sm w-full sm:w-36"
                 value={threshold}
                 aria-label="Mismatch threshold in rand"
                 onChange={(event) => {
@@ -200,7 +200,7 @@ export default function ComparePage() {
             </label>
             <button
               type="button"
-              className="btn btn-primary"
+              className="btn btn-primary w-full sm:w-auto"
               disabled={pasted.trim() === ""}
               onClick={() => {
                 setOverrides({});

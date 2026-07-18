@@ -124,7 +124,9 @@ export const NAV_ITEMS: NavItem[] = [
 
 /** Key summary views for the mobile bottom-tab bar, per the design reference. */
 const DOCK_ITEMS = NAV_ITEMS.filter((item) =>
-  ["/", "/income", "/results", "/compare"].includes(item.href),
+  ["/", "/income/upload", "/deductions", "/results", "/compare"].includes(
+    item.href,
+  ),
 );
 
 function activateOnKey(event: KeyboardEvent<HTMLElement>) {
@@ -263,7 +265,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
           aria-label="Quick navigation"
           className="fixed inset-x-0 bottom-0 z-20 border-t border-base-300 bg-base-100 lg:hidden"
         >
-          <ul className="grid grid-cols-4">
+          <ul className="grid grid-cols-5">
             {DOCK_ITEMS.map((item) => (
               <li key={item.href}>
                 <Link

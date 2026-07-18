@@ -52,7 +52,8 @@ describe("AppShell", () => {
     );
     for (const [label, href] of [
       ["Home", "/"],
-      ["Income", "/income"],
+      ["Upload payslip", "/income/upload"],
+      ["Deductions", "/deductions"],
       ["Results", "/results"],
       ["Compare", "/compare"],
     ] as const) {

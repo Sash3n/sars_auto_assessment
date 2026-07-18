@@ -43,6 +43,49 @@ The app runs at http://localhost:3000.
 
 ## Current state
 
+The dashboard and navigation now follow the original Stitch design reference
+more closely, and two pages that had no mobile-specific styling at all now
+adapt properly on small screens:
+
+- The dashboard's populated-state hero gained a second call to action,
+  "Compare to SARS" (routing to `/compare`), alongside the existing "View
+  calculation" link. "Compare to SARS" was chosen over the design's literal
+  "Accept result" wording since the app has no SARS submission integration:
+  the honest next step for a decision-support tool is checking your estimate
+  against the real assessment, not a fabricated "accept" action with nothing
+  behind it.
+- The four dashboard stat figures (total income, PAYE paid, tax payable,
+  effective tax rate) are now clickable `StatTile` components
+  (`src/components/ui/StatTile.tsx`) with an icon, linking through to the
+  page where that figure is captured or explained, instead of static text.
+- The "next steps" capture bento (employment income / other income /
+  deductions) now also renders, in a condensed form, once data exists, not
+  only on the empty-state landing page. The shared bento markup was
+  extracted into a local `CaptureLinksBento` component to avoid duplicating
+  it between the two states.
+- The mobile bottom-tab bar (`AppShell.tsx`) now shows five tabs, Home,
+  Upload payslip, Deductions, Results, Compare, matching the Stitch mobile
+  designs, instead of the previous four (Home, Income, Results, Compare).
+- `ComparePage.tsx` and `AccountPage.tsx` had zero responsive Tailwind
+  classes and broke down on narrow screens. Both pages' button rows (the
+  mismatch-threshold/Compare controls, and the Save-to-cloud/Load-from-cloud
+  actions) now stack vertically below the `sm` breakpoint and go inline
+  above it, consistent with the pattern already used elsewhere in the app.
+
+This is the first of several planned rounds closing gaps between the
+original Stitch mockups (`docs/design/stitch/`, gitignored, contains real
+design references) and the shipped app: a progress stepper and collapsible
+sections on the Upload/Other-income/Deductions flow, a Travel
+Allowance/Logbook deduction (not yet implemented at all), a home office
+area-based percentage calculator, a Compare page redesign, and PDF export
+are still outstanding and intentionally out of scope for this round.
+
+How it is tested: `src/components/ui/__tests__/StatTile.test.tsx` covers the
+new component's link and rendered value. `src/components/__tests__/AppShell.test.tsx`
+was updated for the new five-tab dock composition. No tax-engine or
+calculation logic changed, so no rand-figure tests were needed; the full
+existing suite (`npm test`) and `npm run build` both pass unchanged.
+
 Two earlier tax years are now selectable: 2023/24 and 2024/25, alongside
 the existing 2025/26 (default) and 2026/27.
 
