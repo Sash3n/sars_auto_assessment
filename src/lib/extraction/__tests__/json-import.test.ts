@@ -134,6 +134,114 @@ describe("importPayslipsFromJson", () => {
     expect(result.payslips).toHaveLength(1);
   });
 
+  it("classifies the spelled-out 'Pay as you Earn' the same as the PAYE abbreviation", () => {
+    const source: PayslipJsonImport = {
+      payslips: [
+        {
+          assumed_period: "March 2026",
+          earnings: [{ description: "Basic Salary", amount: 28_000 }],
+          deductions: [
+            { description: "Pay as you Earn", amount: 4_295.46 },
+            { description: "Unemployment Insurance Fund", amount: 177.12 },
+          ],
+        },
+      ],
+    };
+    const result = importPayslipsFromJson(source);
+    const slip = result.payslips[0];
+    expect(slip.paye).toBe(4_295.46);
+    expect(slip.uif).toBe(177.12);
+    expect(slip.nonTaxDeductions).toEqual([]);
+  });
+
+  it("classifies company_contributions: medical to the employer medical fringe, retirement to the employer retirement fringe, SDL and employer UIF ignored, everything else as a taxable fringe benefit", () => {
+    const source: PayslipJsonImport = {
+      payslips: [
+        {
+          assumed_period: "April 2026",
+          earnings: [{ description: "Basic Salary", amount: 28_000 }],
+          deductions: [{ description: "Pay as you Earn", amount: 3_692.77 }],
+          company_contributions: [
+            { description: "Skills Development Levy", amount: 276.45 },
+            { description: "Unemployment Insurance Fund", amount: 177.12 },
+            { description: "Funeral Cover", amount: 25.33 },
+            { description: "Medical Aid_ER", amount: 3_050.0 },
+            { description: "Vitality_ER", amount: 429.0 },
+            { description: "Discovery Healthy", amount: 41.34 },
+            { description: "Group Life_Fixed Term", amount: 299.6 },
+          ],
+        },
+      ],
+    };
+    const result = importPayslipsFromJson(source);
+    const slip = result.payslips[0];
+    expect(slip.employerMedicalAid).toBe(3_050.0);
+    expect(slip.employerRetirement).toBe(0);
+    // Funeral Cover + Vitality_ER + Discovery Healthy + Group Life_Fixed Term.
+    const fringeTotal = slip.otherFringeBenefits.reduce(
+      (total, item) => total + item.amount,
+      0,
+    );
+    expect(fringeTotal).toBeCloseTo(25.33 + 429.0 + 41.34 + 299.6, 2);
+    expect(slip.otherFringeBenefits.map((item) => item.label)).not.toContain(
+      "Skills Development Levy",
+    );
+  });
+
+  it("classifies a retirement line in company_contributions as the employer retirement fringe", () => {
+    const source: PayslipJsonImport = {
+      payslips: [
+        {
+          assumed_period: "March 2025",
+          earnings: [{ description: "Basic Salary", amount: 30_000 }],
+          deductions: [],
+          company_contributions: [
+            { description: "Pension Fund_ER", amount: 1_500.0 },
+          ],
+        },
+      ],
+    };
+    const result = importPayslipsFromJson(source);
+    expect(result.payslips[0].employerRetirement).toBe(1_500.0);
+  });
+
+  it("uses the top-level employer as a default when a payslip entry has none of its own", () => {
+    const source: PayslipJsonImport = {
+      employer: "DVT",
+      payslips: [
+        {
+          assumed_period: "March 2026",
+          earnings: [{ description: "Basic Salary", amount: 28_000 }],
+          deductions: [],
+        },
+      ],
+    };
+    const result = importPayslipsFromJson(source);
+    expect(result.payslips[0].employer).toBe("DVT");
+  });
+
+  it("gives a specific warning for an employee's own medical scheme deduction, since it is not tracked per payslip", () => {
+    const source: PayslipJsonImport = {
+      payslips: [
+        {
+          assumed_period: "April 2026",
+          earnings: [{ description: "Basic Salary", amount: 28_000 }],
+          deductions: [{ description: "Medical Aid_EE", amount: 49.0 }],
+        },
+      ],
+    };
+    const result = importPayslipsFromJson(source);
+    const slip = result.payslips[0];
+    // Kept visible rather than dropped, but not silently mislabeled as
+    // irrelevant to tax.
+    expect(slip.nonTaxDeductions).toEqual([
+      { id: expect.any(String), label: "Medical Aid_EE", amount: 49.0 },
+    ]);
+    expect(
+      result.warnings.some((w) => /medical scheme contribution/i.test(w)),
+    ).toBe(true);
+  });
+
   it("skips a payslip whose period cannot be determined, with a warning", () => {
     const source: PayslipJsonImport = {
       payslips: [
