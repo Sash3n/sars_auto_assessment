@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import CurrencyField from "@/components/fields/CurrencyField";
+import NamedAmountEditor from "@/components/fields/NamedAmountEditor";
 import StickyActionBar from "@/components/ui/StickyActionBar";
 import Stepper from "@/components/ui/Stepper";
 import { formatRand } from "@/lib/format";
@@ -10,7 +11,9 @@ import type { Dependent, DependentRelationship } from "@/lib/model/types";
 import { clampMonths, isIsoDate } from "@/lib/model/validate";
 import { useActiveYear, useStore } from "@/lib/store/StoreProvider";
 import { composeAssessment } from "@/lib/tax-engine/assessment";
+import { homeOfficeDeduction } from "@/lib/tax-engine/home-office";
 import { getTaxYear } from "@/lib/tax-engine/tax-tables";
+import { travelDeduction } from "@/lib/tax-engine/travel";
 
 const RELATIONSHIPS: { value: DependentRelationship; label: string }[] = [
   { value: "spouse", label: "Spouse" },
@@ -118,6 +121,14 @@ export default function DeductionsPage() {
   const assessment = composeAssessment(year, tables);
   const hasData = assessment.incomeTotal > 0;
   const refund = assessment.netAmount < 0;
+  const travel = year.travel;
+  const travelResult = travelDeduction(travel, tables);
+  const homeOffice = homeOfficeDeduction({
+    directExpenses: profile.homeOfficeExpenses,
+    runningCosts: profile.homeOfficeRunningCosts,
+    officeAreaM2: profile.homeOfficeAreaM2,
+    homeAreaM2: profile.homeTotalAreaM2,
+  });
 
   return (
     <div className="space-y-8 pb-16 lg:pb-0">
@@ -309,14 +320,101 @@ export default function DeductionsPage() {
               hint="Contributions disallowed in prior years"
             />
             <CurrencyField
-              label="Section 18A donations"
+              label="Donations without individual certificates"
               value={profile.donations}
               onChange={(donations) =>
                 dispatch({ type: "updateProfile", patch: { donations } })
               }
+              hint="Section 18A. Capture receipted certificates individually below."
+            />
+          </div>
+          <NamedAmountEditor
+            title="Donation certificates (section 18A)"
+            addLabel="Add certificate"
+            items={profile.donationCertificates}
+            onChange={(donationCertificates) =>
+              dispatch({
+                type: "updateProfile",
+                patch: { donationCertificates },
+              })
+            }
+          />
+          <p className="text-xs opacity-60">
+            SARS caps the section 18A deduction at 10 percent of taxable
+            income; any excess carries forward to next year. The calculation
+            applies the cap automatically.
+          </p>
+        </div>
+      </section>
+
+      <section
+        className="card border border-base-300 bg-base-100 shadow-sm"
+        aria-labelledby="home-office-heading"
+      >
+        <div className="card-body gap-4">
+          <h3 id="home-office-heading" className="card-title text-base">
+            Home office
+          </h3>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="form-control w-full">
+              <span className="label-caps mb-1 block opacity-70">
+                Office area (m²)
+              </span>
+              <input
+                type="number"
+                min={0}
+                step={0.1}
+                className="input input-bordered w-full"
+                value={profile.homeOfficeAreaM2 || ""}
+                aria-label="Office area in square metres"
+                onChange={(event) => {
+                  const value = Number.parseFloat(event.target.value);
+                  dispatch({
+                    type: "updateProfile",
+                    patch: {
+                      homeOfficeAreaM2:
+                        Number.isFinite(value) && value >= 0 ? value : 0,
+                    },
+                  });
+                }}
+              />
+            </label>
+            <label className="form-control w-full">
+              <span className="label-caps mb-1 block opacity-70">
+                Total home area (m²)
+              </span>
+              <input
+                type="number"
+                min={0}
+                step={0.1}
+                className="input input-bordered w-full"
+                value={profile.homeTotalAreaM2 || ""}
+                aria-label="Total home area in square metres"
+                onChange={(event) => {
+                  const value = Number.parseFloat(event.target.value);
+                  dispatch({
+                    type: "updateProfile",
+                    patch: {
+                      homeTotalAreaM2:
+                        Number.isFinite(value) && value >= 0 ? value : 0,
+                    },
+                  });
+                }}
+              />
+            </label>
+            <CurrencyField
+              label="Annual home running costs"
+              value={profile.homeOfficeRunningCosts}
+              onChange={(homeOfficeRunningCosts) =>
+                dispatch({
+                  type: "updateProfile",
+                  patch: { homeOfficeRunningCosts },
+                })
+              }
+              hint="Rent or bond interest, rates, electricity, cleaning. Apportioned by floor area."
             />
             <CurrencyField
-              label="Home office expenses"
+              label="Direct office expenses"
               value={profile.homeOfficeExpenses}
               onChange={(homeOfficeExpenses) =>
                 dispatch({
@@ -324,8 +422,156 @@ export default function DeductionsPage() {
                   patch: { homeOfficeExpenses },
                 })
               }
+              hint="Costs for the office itself, claimed in full"
             />
           </div>
+          <p className="text-sm">
+            Calculated office share:{" "}
+            <span className="currency font-semibold">
+              {homeOffice.percent.toFixed(2)}%
+            </span>{" "}
+            of the home. Home office deduction:{" "}
+            <span className="currency font-semibold">
+              {formatRand(homeOffice.total)}
+            </span>
+          </p>
+          <p className="text-xs opacity-60">
+            SARS only allows a home office claim if the space is used
+            regularly and exclusively for work and, for employees, if the
+            employer permits remote work for more than half the year.
+          </p>
+        </div>
+      </section>
+
+      <section
+        className="card border border-base-300 bg-base-100 shadow-sm"
+        aria-labelledby="travel-heading"
+      >
+        <div className="card-body gap-4">
+          <h3 id="travel-heading" className="card-title text-base">
+            Travel allowance (logbook)
+          </h3>
+          <p className="text-sm opacity-70">
+            If you receive a travel allowance, the deemed cost deduction is
+            claimed against it using your logbook kilometres and the SARS
+            cost scale for {tables.label}. Capture the allowance itself as a
+            payslip allowance under Income.
+          </p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <CurrencyField
+              label="Travel allowance received for the year"
+              value={travel.allowanceReceived}
+              onChange={(allowanceReceived) =>
+                dispatch({ type: "updateTravel", patch: { allowanceReceived } })
+              }
+              hint="IRP5 code 3701"
+            />
+            <CurrencyField
+              label="Vehicle value"
+              value={travel.vehicleValue}
+              onChange={(vehicleValue) =>
+                dispatch({ type: "updateTravel", patch: { vehicleValue } })
+              }
+              hint="Cost including VAT, excluding finance charges"
+            />
+            <label className="form-control w-full">
+              <span className="label-caps mb-1 block opacity-70">
+                Total kilometres for the year
+              </span>
+              <input
+                type="number"
+                min={0}
+                className="input input-bordered w-full"
+                value={travel.totalKm || ""}
+                aria-label="Total kilometres for the year"
+                onChange={(event) => {
+                  const value = Number.parseFloat(event.target.value);
+                  dispatch({
+                    type: "updateTravel",
+                    patch: {
+                      totalKm: Number.isFinite(value) && value >= 0 ? value : 0,
+                    },
+                  });
+                }}
+              />
+            </label>
+            <label className="form-control w-full">
+              <span className="label-caps mb-1 block opacity-70">
+                Business kilometres (logbook)
+              </span>
+              <input
+                type="number"
+                min={0}
+                className="input input-bordered w-full"
+                value={travel.businessKm || ""}
+                aria-label="Business kilometres from the logbook"
+                onChange={(event) => {
+                  const value = Number.parseFloat(event.target.value);
+                  dispatch({
+                    type: "updateTravel",
+                    patch: {
+                      businessKm:
+                        Number.isFinite(value) && value >= 0 ? value : 0,
+                    },
+                  });
+                }}
+              />
+            </label>
+            <label className="label cursor-pointer justify-start gap-3">
+              <input
+                type="checkbox"
+                className="checkbox checkbox-primary checkbox-sm"
+                checked={travel.paidFullFuel}
+                aria-label="I paid the full fuel cost"
+                onChange={(event) =>
+                  dispatch({
+                    type: "updateTravel",
+                    patch: { paidFullFuel: event.target.checked },
+                  })
+                }
+              />
+              <span className="text-sm">I paid the full fuel cost</span>
+            </label>
+            <label className="label cursor-pointer justify-start gap-3">
+              <input
+                type="checkbox"
+                className="checkbox checkbox-primary checkbox-sm"
+                checked={travel.paidFullMaintenance}
+                aria-label="I paid the full maintenance cost"
+                onChange={(event) =>
+                  dispatch({
+                    type: "updateTravel",
+                    patch: { paidFullMaintenance: event.target.checked },
+                  })
+                }
+              />
+              <span className="text-sm">
+                I paid the full maintenance cost (no maintenance plan)
+              </span>
+            </label>
+          </div>
+          {travelResult.allowed > 0 ? (
+            <p className="text-sm">
+              Deemed rate:{" "}
+              <span className="currency font-semibold">
+                R {travelResult.ratePerKm.toFixed(2)}/km
+              </span>
+              . Travel deduction:{" "}
+              <span className="currency font-semibold">
+                {formatRand(travelResult.allowed)}
+              </span>
+              {travelResult.deemedCost > travelResult.allowed
+                ? " (capped at the allowance received)"
+                : null}
+            </p>
+          ) : (
+            <p className="text-xs opacity-60">
+              A logbook with total and business kilometres, the vehicle
+              value, and the allowance received are all needed before a
+              deduction is claimed. SARS requires the logbook to be kept for
+              five years.
+            </p>
+          )}
         </div>
       </section>
 
