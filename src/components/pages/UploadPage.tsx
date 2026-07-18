@@ -23,6 +23,8 @@ import {
   type ExtractionOutcome,
   type FieldSuggestion,
 } from "@/lib/extraction/types";
+import MonthCoverageGrid from "@/components/ui/MonthCoverageGrid";
+import Stepper from "@/components/ui/Stepper";
 import { formatRand } from "@/lib/format";
 import { emptyPayslip } from "@/lib/model/defaults";
 import { monthsOfTaxYear } from "@/lib/model/months";
@@ -235,6 +237,7 @@ export default function UploadPage() {
 
   return (
     <div className="space-y-6">
+      <Stepper activeIndex={0} />
       <div>
         <h2 className="text-2xl font-bold tracking-tight">Upload a payslip</h2>
         <p className="mt-1 text-sm opacity-70">
@@ -243,6 +246,8 @@ export default function UploadPage() {
           fallback.
         </p>
       </div>
+
+      <MonthCoverageGrid />
 
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="card border border-base-300 bg-base-100 shadow-sm">
