@@ -272,10 +272,10 @@ export default function AccountPage() {
                   onChange={(event) => setPassphrase(event.target.value)}
                 />
               </label>
-              <div className="card-actions">
+              <div className="card-actions flex-col sm:flex-row">
                 <button
                   type="button"
-                  className="btn btn-primary"
+                  className="btn btn-primary w-full sm:w-auto"
                   disabled={busy}
                   onClick={() => void handleSave()}
                 >
@@ -283,7 +283,7 @@ export default function AccountPage() {
                 </button>
                 <button
                   type="button"
-                  className="btn btn-outline"
+                  className="btn btn-outline w-full sm:w-auto"
                   disabled={busy}
                   onClick={() => void handleLoad()}
                 >
