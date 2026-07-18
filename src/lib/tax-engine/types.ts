@@ -15,6 +15,17 @@ export interface TaxBracket {
   rate: number;
 }
 
+export interface TravelCostBand {
+  /** Upper bound of the vehicle value band, inclusive. Null for the top band. */
+  maxVehicleValue: number | null;
+  /** Fixed cost in rand per year. */
+  fixedCost: number;
+  /** Fuel cost in cents per kilometre. */
+  fuelCentsPerKm: number;
+  /** Maintenance cost in cents per kilometre. */
+  maintenanceCentsPerKm: number;
+}
+
 export interface TaxYearTables {
   /** Stable id used in code and storage, for example "2025-26". */
   id: string;
@@ -59,6 +70,12 @@ export interface TaxYearTables {
     /** Prescribed reimbursive rate per business kilometre. */
     reimbursiveRatePerKm: number;
   };
+  /**
+   * SARS cost scale for the deemed cost travel deduction (section
+   * 8(1)(b)), ordered by vehicle value band. The open top band has a null
+   * maxVehicleValue.
+   */
+  travelDeemedCost: TravelCostBand[];
   cgt: {
     /** Portion of the net capital gain included in taxable income. */
     inclusionRate: number;

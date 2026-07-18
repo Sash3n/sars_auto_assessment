@@ -55,6 +55,18 @@ export const year2023_24: TaxYearTables = {
   travel: {
     reimbursiveRatePerKm: 4.64,
   },
+  // SARS eLogbook fixed cost table, 1 March 2023 to 29 February 2024.
+  travelDeemedCost: [
+    { maxVehicleValue: 100_000, fixedCost: 33_760, fuelCentsPerKm: 141.5, maintenanceCentsPerKm: 43.8 },
+    { maxVehicleValue: 200_000, fixedCost: 60_329, fuelCentsPerKm: 158.0, maintenanceCentsPerKm: 54.8 },
+    { maxVehicleValue: 300_000, fixedCost: 86_958, fuelCentsPerKm: 171.7, maintenanceCentsPerKm: 60.4 },
+    { maxVehicleValue: 400_000, fixedCost: 110_554, fuelCentsPerKm: 184.6, maintenanceCentsPerKm: 65.9 },
+    { maxVehicleValue: 500_000, fixedCost: 134_150, fuelCentsPerKm: 197.6, maintenanceCentsPerKm: 77.5 },
+    { maxVehicleValue: 600_000, fixedCost: 158_856, fuelCentsPerKm: 226.6, maintenanceCentsPerKm: 91.0 },
+    { maxVehicleValue: 700_000, fixedCost: 183_611, fuelCentsPerKm: 230.5, maintenanceCentsPerKm: 102.1 },
+    { maxVehicleValue: 800_000, fixedCost: 209_685, fuelCentsPerKm: 234.3, maintenanceCentsPerKm: 113.1 },
+    { maxVehicleValue: null, fixedCost: 209_685, fuelCentsPerKm: 234.3, maintenanceCentsPerKm: 113.1 },
+  ],
   cgt: {
     inclusionRate: 0.4,
     annualExclusion: 40_000,

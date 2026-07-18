@@ -59,6 +59,20 @@ export const year2026_27: TaxYearTables = {
   travel: {
     reimbursiveRatePerKm: 4.95,
   },
+  // PAYE-GEN-01-G03-A01 Rate per Kilometre Schedule, revision 19,
+  // effective 1 March 2026. Note the new value bands and that the open
+  // band's maintenance rate differs from the band below it.
+  travelDeemedCost: [
+    { maxVehicleValue: 115_000, fixedCost: 38_344, fuelCentsPerKm: 132.9, maintenanceCentsPerKm: 49.1 },
+    { maxVehicleValue: 230_000, fixedCost: 68_487, fuelCentsPerKm: 148.4, maintenanceCentsPerKm: 61.4 },
+    { maxVehicleValue: 345_000, fixedCost: 98_689, fuelCentsPerKm: 161.2, maintenanceCentsPerKm: 67.8 },
+    { maxVehicleValue: 460_000, fixedCost: 125_393, fuelCentsPerKm: 173.4, maintenanceCentsPerKm: 74.0 },
+    { maxVehicleValue: 575_000, fixedCost: 152_097, fuelCentsPerKm: 185.5, maintenanceCentsPerKm: 86.9 },
+    { maxVehicleValue: 690_000, fixedCost: 180_078, fuelCentsPerKm: 212.8, maintenanceCentsPerKm: 102.0 },
+    { maxVehicleValue: 805_000, fixedCost: 208_106, fuelCentsPerKm: 216.5, maintenanceCentsPerKm: 114.5 },
+    { maxVehicleValue: 920_000, fixedCost: 237_679, fuelCentsPerKm: 220.1, maintenanceCentsPerKm: 126.1 },
+    { maxVehicleValue: null, fixedCost: 237_679, fuelCentsPerKm: 220.1, maintenanceCentsPerKm: 126.9 },
+  ],
   cgt: {
     inclusionRate: 0.4,
     annualExclusion: 50_000,
