@@ -69,8 +69,7 @@ export function normalizeAppData(data: AppData): AppData {
       profile: { ...emptyProfile(), ...year.profile },
       travel: { ...emptyTravelClaim(), ...year.travel },
       carryForward: {
-        retirementExcessPrior: 0,
-        ...year.carryForward,
+        retirementExcessPrior: year.carryForward?.retirementExcessPrior ?? 0,
       },
     };
   }
