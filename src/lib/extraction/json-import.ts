@@ -28,6 +28,14 @@ export interface JsonPayslipEntry {
   note?: string;
   earnings?: JsonSalaryLine[];
   deductions?: JsonSalaryLine[];
+  /**
+   * Amounts the employer pays alongside the payslip, not deducted from the
+   * employee's pay: employer retirement and medical contributions, group
+   * risk benefits, statutory levies. Distinct from earnings/deductions
+   * because the same keyword means something different here, "medical"
+   * always means the employer's contribution, never the employee's own.
+   */
+  company_contributions?: JsonSalaryLine[];
 }
 
 export interface JsonTaxCertificateLine {
@@ -44,6 +52,8 @@ export interface JsonTaxCertificate {
 }
 
 export interface PayslipJsonImport {
+  /** Default employer for entries that do not name their own. */
+  employer?: string;
   payslips: JsonPayslipEntry[];
   tax_certificate?: JsonTaxCertificate;
 }
@@ -121,7 +131,10 @@ interface ClassifyRule {
 }
 
 const CLASSIFY_RULES: ClassifyRule[] = [
-  { target: "paye", match: (d) => d.includes("paye") },
+  {
+    target: "paye",
+    match: (d) => d.includes("paye") || d.includes("pay as you earn"),
+  },
   {
     target: "uif",
     match: (d) => d.includes("uif") || d.includes("unemployment insurance"),
@@ -187,6 +200,45 @@ function classify(description: string): LineTarget | null {
     }
   }
   return null;
+}
+
+type CompanyContributionTarget =
+  | "employerMedicalAid"
+  | "employerRetirement"
+  | "otherFringeBenefit"
+  | "ignore";
+
+/*
+ * company_contributions lines are always the employer's own contribution,
+ * so the same keywords that are ambiguous in earnings/deductions are not
+ * here: "medical" always means the employer medical fringe benefit (3805),
+ * "pension"/"provident"/"retirement" always mean the employer retirement
+ * fringe benefit (3817). The Skills Development Levy and the employer's own
+ * UIF contribution are statutory employer costs, not paid for the
+ * employee's benefit, so they are not fringe benefits and are ignored
+ * rather than added anywhere. The employee's own UIF contribution is
+ * already captured from the deductions section. Anything else the employer
+ * pays here (group life, funeral cover, wellness or rewards programs) is a
+ * taxable fringe benefit by default under the Seventh Schedule, unless it
+ * is one of the two recognised exceptions above.
+ */
+function classifyCompanyContribution(
+  description: string,
+): CompanyContributionTarget {
+  const d = description.toLowerCase().trim();
+  if (d.includes("skills development levy") || d.includes("sdl")) {
+    return "ignore";
+  }
+  if (d.includes("uif") || d.includes("unemployment insurance")) {
+    return "ignore";
+  }
+  if (d.includes("medical")) {
+    return "employerMedicalAid";
+  }
+  if (d.includes("pension") || d.includes("provident") || d.includes("retirement")) {
+    return "employerRetirement";
+  }
+  return "otherFringeBenefit";
 }
 
 function emptyDraft(periodMonth: string, employer: string): Payslip {
@@ -295,7 +347,7 @@ export function importPayslipsFromJson(source: PayslipJsonImport): JsonImportRes
       continue;
     }
 
-    const draft = emptyDraft(periodMonth, entry.employer ?? "");
+    const draft = emptyDraft(periodMonth, entry.employer ?? source.employer ?? "");
     const sections: [JsonSalaryLine[], "earnings" | "deductions"][] = [
       [entry.earnings ?? [], "earnings"],
       [entry.deductions ?? [], "deductions"],
@@ -312,14 +364,35 @@ export function importPayslipsFromJson(source: PayslipJsonImport): JsonImportRes
           } else {
             draft.otherFringeBenefits.push({ id: newId(), label, amount: magnitude });
           }
+          const looksLikeOwnMedicalContribution =
+            section === "deductions" &&
+            line.description.toLowerCase().includes("medical");
           warnings.push(
-            `${periodMonth}: unrecognised ${section} line "${line.description}" (${line.salary_code ?? "no code"}). Kept as ${
-              section === "deductions" ? "a non-tax deduction" : "a taxable fringe benefit"
-            } by default; check it landed in the right place.`,
+            looksLikeOwnMedicalContribution
+              ? `${periodMonth}: "${line.description}" (R ${magnitude.toFixed(2)}) looks like your own medical scheme contribution, deducted from pay. This app tracks that at the taxpayer level under Deductions > medical costs, not per payslip, add it there so it counts toward your medical tax credit. Kept here as a non-tax deduction for now.`
+              : `${periodMonth}: unrecognised ${section} line "${line.description}" (${line.salary_code ?? "no code"}). Kept as ${
+                  section === "deductions" ? "a non-tax deduction" : "a taxable fringe benefit"
+                } by default; check it landed in the right place.`,
           );
           continue;
         }
         applyLine(draft, target, line, section, periodMonth, warnings);
+      }
+    }
+
+    for (const line of entry.company_contributions ?? []) {
+      const target = classifyCompanyContribution(line.description);
+      if (target === "ignore") {
+        continue;
+      }
+      const magnitude = clampCurrency(Math.abs(line.amount));
+      const label = sanitizeLabel(line.description).trim() || "Amount";
+      if (target === "employerMedicalAid") {
+        draft.employerMedicalAid += magnitude;
+      } else if (target === "employerRetirement") {
+        draft.employerRetirement += magnitude;
+      } else {
+        draft.otherFringeBenefits.push({ id: newId(), label, amount: magnitude });
       }
     }
 
