@@ -2,6 +2,9 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import BracketBar from "@/components/charts/BracketBar";
+import StickyActionBar from "@/components/ui/StickyActionBar";
+import { bracketSegments } from "@/lib/analytics";
 import { formatRand } from "@/lib/format";
 import { useActiveYear } from "@/lib/store/StoreProvider";
 import { composeAssessment } from "@/lib/tax-engine/assessment";
@@ -290,11 +293,39 @@ export default function ResultsPage() {
             </div>
           </section>
 
+          <section className="card border border-base-300 bg-base-100 shadow-sm">
+            <div className="card-body">
+              <h3 className="card-title text-base">
+                Marginal tax rate position
+              </h3>
+              <BracketBar
+                view={bracketSegments(tables, assessment.taxableIncome)}
+                taxableIncome={assessment.taxableIncome}
+              />
+            </div>
+          </section>
+
           <div className="flex justify-end">
             <Link href="/compare" className="btn btn-primary">
               Compare with the SARS assessment
             </Link>
           </div>
+
+          <StickyActionBar>
+            <span className="text-sm">
+              {refund ? "Estimated refund " : "Estimated owed "}
+              <span
+                className={`currency font-semibold ${
+                  refund ? "text-primary" : "text-error"
+                }`}
+              >
+                {formatRand(Math.abs(assessment.netAmount))}
+              </span>
+            </span>
+            <Link href="/compare" className="btn btn-primary btn-sm">
+              Compare
+            </Link>
+          </StickyActionBar>
         </>
       ) : (
         <div className="card border border-dashed border-base-300 bg-base-100">
