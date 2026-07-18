@@ -217,3 +217,94 @@ describe("composeAssessment, edge cases", () => {
     expect(assessment.incomeTotal).toBe(24_000);
   });
 });
+
+describe("composeAssessment, travel, home office, and donation certificates", () => {
+  function extendedYear(): TaxYearData {
+    const year = referenceYear();
+    year.travel = {
+      allowanceReceived: 48_000,
+      totalKm: 30_000,
+      businessKm: 10_000,
+      vehicleValue: 250_000,
+      paidFullFuel: true,
+      paidFullMaintenance: true,
+    };
+    year.profile.homeOfficeExpenses = 1_500;
+    year.profile.homeOfficeAreaM2 = 12;
+    year.profile.homeTotalAreaM2 = 150;
+    year.profile.homeOfficeRunningCosts = 50_000;
+    year.profile.donations = 5_000;
+    year.profile.donationCertificates = [
+      { id: "d1", label: "SPCA", amount: 2_000 },
+      { id: "d2", label: "Food bank", amount: 3_000 },
+    ];
+    return year;
+  }
+
+  const assessment = composeAssessment(extendedYear(), y2025);
+
+  it("claims the travel deduction capped at the allowance", () => {
+    const line = assessment.deductionLines.find((entry) =>
+      entry.description.toLowerCase().includes("travel"),
+    );
+    // Deemed cost 53 495.67 exceeds the 48 000 allowance.
+    expect(line?.amount).toBe(-48_000);
+  });
+
+  it("claims the area apportioned home office deduction", () => {
+    const line = assessment.deductionLines.find((entry) =>
+      entry.description.toLowerCase().includes("home office"),
+    );
+    // 1 500 direct + 8 percent of 50 000 = 5 500.
+    expect(line?.amount).toBe(-5_500);
+  });
+
+  it("sums flat donations and itemised certificates", () => {
+    const line = assessment.deductionLines.find((entry) =>
+      entry.description.toLowerCase().includes("donation"),
+    );
+    expect(line?.amount).toBe(-10_000);
+  });
+
+  it("totals the deductions and reduces taxable income accordingly", () => {
+    // 61 600 retirement + 48 000 travel + 5 500 home office + 10 000
+    // donations = 125 100. Taxable = 559 200 - 125 100 = 434 100.
+    expect(assessment.deductionsTotal).toBe(125_100);
+    expect(assessment.taxableIncome).toBe(434_100);
+  });
+
+  it("caps section 18A donations at 10 percent of taxable income and warns", () => {
+    const year = referenceYear();
+    year.profile.donations = 60_000;
+    const capped = composeAssessment(year, y2025);
+    // Base 559 200 - 61 600 = 497 600, cap 49 760.
+    const line = capped.deductionLines.find((entry) =>
+      entry.description.toLowerCase().includes("donation"),
+    );
+    expect(line?.amount).toBe(-49_760);
+    expect(capped.taxableIncome).toBe(447_840);
+    expect(
+      capped.warnings.some((warning) =>
+        warning.toLowerCase().includes("donation"),
+      ),
+    ).toBe(true);
+  });
+
+  it("warns when a travel allowance exists but no logbook kilometres", () => {
+    const year = referenceYear();
+    year.travel = {
+      allowanceReceived: 48_000,
+      totalKm: 0,
+      businessKm: 0,
+      vehicleValue: 0,
+      paidFullFuel: true,
+      paidFullMaintenance: true,
+    };
+    const result = composeAssessment(year, y2025);
+    expect(
+      result.warnings.some((warning) =>
+        warning.toLowerCase().includes("travel"),
+      ),
+    ).toBe(true);
+  });
+});
