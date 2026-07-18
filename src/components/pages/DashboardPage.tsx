@@ -4,6 +4,7 @@ import Link from "next/link";
 import BracketBar from "@/components/charts/BracketBar";
 import BreakdownBars from "@/components/charts/BreakdownBars";
 import MonthlyBars from "@/components/charts/MonthlyBars";
+import StatTile from "@/components/ui/StatTile";
 import {
   bracketSegments,
   deductionBreakdown,
@@ -14,6 +15,80 @@ import { formatRand } from "@/lib/format";
 import { useActiveYear, useStore } from "@/lib/store/StoreProvider";
 import { composeAssessment } from "@/lib/tax-engine/assessment";
 import { getTaxYear } from "@/lib/tax-engine/tax-tables";
+
+const iconProps = {
+  width: 20,
+  height: 20,
+  viewBox: "0 0 24 24",
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: 2,
+  strokeLinecap: "round",
+  strokeLinejoin: "round",
+} as const;
+
+function IncomeIcon() {
+  return (
+    <svg {...iconProps} aria-hidden="true">
+      <path d="M12 3v12m0-12 4 4m-4-4-4 4" />
+      <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
+    </svg>
+  );
+}
+
+function PayeIcon() {
+  return (
+    <svg {...iconProps} aria-hidden="true">
+      <rect x="4" y="3" width="16" height="18" rx="2" />
+      <path d="M8 7h8m-8 4h8m-8 4h4" />
+    </svg>
+  );
+}
+
+function TaxIcon() {
+  return (
+    <svg {...iconProps} aria-hidden="true">
+      <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H7" />
+    </svg>
+  );
+}
+
+function RateIcon() {
+  return (
+    <svg {...iconProps} aria-hidden="true">
+      <circle cx="6" cy="18" r="2" />
+      <circle cx="18" cy="6" r="2" />
+      <path d="m5 19 14-14" />
+    </svg>
+  );
+}
+
+function CaptureLinksBento({ condensed }: { condensed?: boolean }) {
+  return (
+    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      {captureLinks.map((section) => (
+        <article
+          key={section.href}
+          className="card border border-base-300 bg-base-100 shadow-sm"
+        >
+          <div className="card-body">
+            <h3 className="card-title text-lg">{section.title}</h3>
+            {condensed ? null : (
+              <p className="text-sm leading-relaxed opacity-80">
+                {section.body}
+              </p>
+            )}
+            <div className="card-actions mt-2">
+              <Link href={section.href} className="btn btn-primary btn-sm">
+                {section.action}
+              </Link>
+            </div>
+          </div>
+        </article>
+      ))}
+    </div>
+  );
+}
 
 const captureLinks = [
   {
@@ -77,36 +152,41 @@ export default function DashboardPage() {
                       : `You owe SARS ${formatRand(assessment.netAmount)}`}
                   </p>
                 </div>
-                <Link href="/results" className="btn btn-primary btn-sm">
-                  View calculation
-                </Link>
+                <div className="flex gap-2">
+                  <Link href="/compare" className="btn btn-primary btn-sm">
+                    Compare to SARS
+                  </Link>
+                  <Link href="/results" className="btn btn-ghost btn-sm">
+                    View calculation
+                  </Link>
+                </div>
               </div>
-              <dl className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <div>
-                  <dt className="label-caps opacity-60">Total income</dt>
-                  <dd className="currency text-lg font-semibold">
-                    {formatRand(assessment.incomeTotal)}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="label-caps opacity-60">PAYE paid</dt>
-                  <dd className="currency text-lg font-semibold">
-                    {formatRand(assessment.paye)}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="label-caps opacity-60">Tax payable</dt>
-                  <dd className="currency text-lg font-semibold">
-                    {formatRand(assessment.assessedTaxAfterRebates)}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="label-caps opacity-60">Effective tax rate</dt>
-                  <dd className="currency text-lg font-semibold">
-                    {assessment.effectiveRatePercent.toFixed(1)}%
-                  </dd>
-                </div>
-              </dl>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <StatTile
+                  icon={<IncomeIcon />}
+                  label="Total income"
+                  value={formatRand(assessment.incomeTotal)}
+                  href="/income"
+                />
+                <StatTile
+                  icon={<PayeIcon />}
+                  label="PAYE paid"
+                  value={formatRand(assessment.paye)}
+                  href="/results"
+                />
+                <StatTile
+                  icon={<TaxIcon />}
+                  label="Tax payable"
+                  value={formatRand(assessment.assessedTaxAfterRebates)}
+                  href="/results"
+                />
+                <StatTile
+                  icon={<RateIcon />}
+                  label="Effective tax rate"
+                  value={`${assessment.effectiveRatePercent.toFixed(1)}%`}
+                  href="/results"
+                />
+              </div>
             </div>
           </section>
 
@@ -193,6 +273,13 @@ export default function DashboardPage() {
               </div>
             </section>
           </div>
+
+          <section>
+            <h2 className="card-title text-base">Next steps</h2>
+            <div className="mt-3">
+              <CaptureLinksBento condensed />
+            </div>
+          </section>
         </>
       ) : (
         <>
@@ -211,29 +298,7 @@ export default function DashboardPage() {
               caught inside the correction window.
             </p>
           </div>
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {captureLinks.map((section) => (
-              <article
-                key={section.href}
-                className="card border border-base-300 bg-base-100 shadow-sm"
-              >
-                <div className="card-body">
-                  <h3 className="card-title text-lg">{section.title}</h3>
-                  <p className="text-sm leading-relaxed opacity-80">
-                    {section.body}
-                  </p>
-                  <div className="card-actions mt-2">
-                    <Link
-                      href={section.href}
-                      className="btn btn-primary btn-sm"
-                    >
-                      {section.action}
-                    </Link>
-                  </div>
-                </div>
-              </article>
-            ))}
-          </div>
+          <CaptureLinksBento />
           <p className="text-sm opacity-70">
             Once income is captured, this page becomes your dashboard:
             bracket position, monthly trends, deduction breakdown, and
