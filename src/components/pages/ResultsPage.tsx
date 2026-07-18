@@ -87,6 +87,14 @@ export default function ResultsPage() {
 
   return (
     <div className="space-y-6">
+      <div className="hidden print:block">
+        <p className="text-lg font-bold">
+          SARS TaxCalc, estimated assessment, {tables.label}
+        </p>
+        <p className="text-xs">
+          Generated for personal reference. Not an official SARS document.
+        </p>
+      </div>
       <div>
         <h2 className="text-2xl font-bold tracking-tight">
           Estimated assessment
@@ -305,7 +313,14 @@ export default function ResultsPage() {
             </div>
           </section>
 
-          <div className="flex justify-end">
+          <div className="flex flex-wrap justify-end gap-2 print:hidden">
+            <button
+              type="button"
+              className="btn btn-outline"
+              onClick={() => window.print()}
+            >
+              Export PDF
+            </button>
             <Link href="/compare" className="btn btn-primary">
               Compare with the SARS assessment
             </Link>
@@ -322,9 +337,18 @@ export default function ResultsPage() {
                 {formatRand(Math.abs(assessment.netAmount))}
               </span>
             </span>
-            <Link href="/compare" className="btn btn-primary btn-sm">
-              Compare
-            </Link>
+            <span className="flex gap-2">
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={() => window.print()}
+              >
+                Export
+              </button>
+              <Link href="/compare" className="btn btn-primary btn-sm">
+                Compare
+              </Link>
+            </span>
           </StickyActionBar>
         </>
       ) : (

@@ -154,6 +154,7 @@ export default function ComparePage() {
   const [parsed, setParsed] = useState<ParsedIta34 | null>(null);
   const [threshold, setThreshold] = useState(5);
   const [overrides, setOverrides] = useState<Record<string, number>>({});
+  const [shareNotice, setShareNotice] = useState<string | null>(null);
 
   const effectiveSars: ParsedIta34 | null = useMemo(() => {
     if (!parsed) {
@@ -222,8 +223,37 @@ export default function ComparePage() {
     [objectionLines, tables.label],
   );
 
+  async function handleShare() {
+    const summaryText = `SARS TaxCalc comparison, ${tables.label}: ${
+      mismatches === 0
+        ? "no mismatches above the threshold"
+        : `${mismatches} mismatch${mismatches === 1 ? "" : "es"}`
+    } across ${rows.length} compared lines.`;
+    try {
+      if (typeof navigator.share === "function") {
+        await navigator.share({
+          title: "SARS TaxCalc comparison",
+          text: summaryText,
+        });
+      } else {
+        await navigator.clipboard.writeText(summaryText);
+        setShareNotice("Comparison summary copied to the clipboard.");
+      }
+    } catch {
+      // The user closed the share sheet, nothing to do.
+    }
+  }
+
   return (
     <div className="space-y-6">
+      <div className="hidden print:block">
+        <p className="text-lg font-bold">
+          SARS TaxCalc, comparison with the SARS assessment, {tables.label}
+        </p>
+        <p className="text-xs">
+          Generated for personal reference. Not an official SARS document.
+        </p>
+      </div>
       <div>
         <h2 className="text-2xl font-bold tracking-tight">
           Compare with SARS
@@ -236,7 +266,7 @@ export default function ComparePage() {
         </p>
       </div>
 
-      <section className="card border border-base-300 bg-base-100 shadow-sm">
+      <section className="card border border-base-300 bg-base-100 shadow-sm print:hidden">
         <div className="card-body">
           <h3 className="card-title text-base">Paste the ITA34 text</h3>
           <textarea
@@ -553,6 +583,36 @@ export default function ComparePage() {
               </p>
             </div>
           </section>
+
+          <div className="flex flex-wrap justify-end gap-2 print:hidden">
+            <button
+              type="button"
+              className="btn btn-outline"
+              onClick={() => window.print()}
+            >
+              Export PDF
+            </button>
+            <button
+              type="button"
+              className="btn btn-outline"
+              onClick={() => void handleShare()}
+            >
+              Share summary
+            </button>
+            <a
+              href="https://www.sarsefiling.co.za"
+              target="_blank"
+              rel="noreferrer"
+              className="btn btn-primary"
+            >
+              Open SARS eFiling
+            </a>
+          </div>
+          {shareNotice ? (
+            <div role="status" className="alert alert-success print:hidden">
+              <span>{shareNotice}</span>
+            </div>
+          ) : null}
         </>
       ) : null}
 
