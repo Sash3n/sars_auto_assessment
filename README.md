@@ -43,6 +43,48 @@ The app runs at http://localhost:3000.
 
 ## Current state
 
+The structured JSON payslip import fixes two real-world gaps found against
+an actual vision-extracted payslip batch:
+
+- The PAYE classify rule only matched the literal string "paye". A payslip
+  spelling it out in full, "Pay as you Earn", fell through to an
+  unrecognised line and PAYE stayed at zero. The rule now matches both.
+- Employer-side amounts (employer medical aid, employer retirement, group
+  risk benefits, statutory levies) are commonly reported in their own
+  `company_contributions` array rather than mixed into `deductions`, which
+  the importer previously ignored entirely, silently dropping employer
+  medical fringe benefits (SARS code 3805) and other taxable fringe
+  benefits with no warning at all. `company_contributions` is now a
+  supported section with its own classification: "medical" always means the
+  employer medical fringe, "pension"/"provident"/"retirement" always mean
+  the employer retirement fringe (unlike `deductions`, where the same words
+  are ambiguous between employee and employer). The Skills Development Levy
+  and the employer's own UIF contribution are statutory employer costs, not
+  paid for the employee's benefit, so they are recognised and intentionally
+  ignored rather than misfiled as a fringe benefit. Everything else the
+  employer pays (group life, funeral cover, wellness or rewards programs) is
+  a taxable fringe benefit by default under the Seventh Schedule.
+- A top-level `employer` field on the import batch is now used as a default
+  for entries that do not name their own, since some extraction batches
+  name the employer once for the whole file rather than per payslip.
+- An employee's own medical scheme deduction (for example "Medical Aid_EE")
+  has no per-payslip field, since this app tracks that at the taxpayer level
+  under Deductions for the section 6A/6B credit, not per payslip. It is
+  still kept visible as a non-tax deduction rather than dropped, but now
+  gets a specific warning naming the amount and pointing at where to add it,
+  instead of the generic "unrecognised line" message that implied it did
+  not matter for tax.
+
+How it is tested: `src/lib/extraction/__tests__/json-import.test.ts` adds
+cases for the spelled-out PAYE phrase, `company_contributions` classifying
+medical and retirement lines correctly while ignoring SDL and employer UIF,
+an unrecognised `company_contributions` line falling back to a taxable
+fringe benefit, the top-level employer default, and the specific medical
+deduction warning. Verified end to end against a real 12-month JSON export
+from an actual employer: every figure now matches the source data's own
+year-to-date totals exactly (previously employer medical aid and all other
+fringe benefits were silently zero).
+
 The Compare page now offers an objection summary once a real SARS
 assessment is pasted and mismatches are found:
 
