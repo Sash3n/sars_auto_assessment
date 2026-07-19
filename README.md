@@ -43,6 +43,29 @@ The app runs at http://localhost:3000.
 
 ## Current state
 
+Two more mobile issues found from live screenshots, in the same PR as the
+figure-flex fix below since both came from the same round of user testing:
+
+- **Blank m² and kilometre fields on Deductions.** Office area, total home
+  area, total kilometres, and business kilometres all render their value as
+  an empty string when 0 (so the user isn't stuck looking at a literal "0"
+  while typing a real figure), but had no placeholder to fill that gap.
+  Next to currency fields on the same page, which always show something
+  (`R` plus `0.00`), a box with nothing in it at all reads as broken rather
+  than just unset, especially in dark mode. Fixed by adding a `0`
+  placeholder to all four; they were the only inputs in the codebase using
+  the `value={x || ""}` pattern without one.
+- **Mobile legal disclaimer hidden under the sticky bars.** The mobile
+  disclaimer block in `AppShell.tsx` reserved just enough bottom padding to
+  clear the bottom-tab dock nav alone. Deductions, Results, and Other
+  Income each also render a `StickyActionBar` above the dock, and combined
+  the two fixed bars covered the disclaimer's last line. Fixed with one
+  padding bump (`pb-20` to `pb-28`) rather than threading sticky-bar
+  awareness from three pages into the shell. Verified by measuring the
+  disclaimer text's bounding box against the sticky bar's on a real
+  headless-Chromium mobile viewport: a 24.6px clear gap now, where it
+  previously overlapped.
+
 Follow-up round: the previous mobile readability fixes did not actually
 resolve the reported chart squishing, because they treated the symptom
 (overlapping labels) rather than the cause. This round found and fixed the
