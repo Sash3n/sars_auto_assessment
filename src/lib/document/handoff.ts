@@ -5,9 +5,13 @@ import type { ComparisonRow } from "@/lib/tax-engine/compare";
  * only in that page's component state, it is never written to AppData. To
  * open the same comparison as an ITA34-styled document on its own route,
  * the already-computed comparison rows are handed off through
- * sessionStorage: ephemeral, tab-scoped, and read once. If the handoff is
- * missing (direct navigation, a refresh after it was read, a different
- * tab), the statement page falls back to the solo assessment view.
+ * sessionStorage: ephemeral and tab-scoped. Reading does not clear the
+ * entry (a read happens inside render/effect timing, where React's Strict
+ * Mode dev double-invocation would otherwise see it already gone on the
+ * second call); it is simply overwritten the next time the Compare page
+ * writes a fresh comparison. If the handoff is missing (direct navigation,
+ * a different tab), the statement page falls back to the solo assessment
+ * view.
  */
 
 const HANDOFF_KEY = "sars-statement-handoff-v1";
@@ -31,7 +35,6 @@ export function readComparisonHandoff(): ComparisonHandoff | null {
     if (!raw) {
       return null;
     }
-    window.sessionStorage.removeItem(HANDOFF_KEY);
     const parsed: unknown = JSON.parse(raw);
     if (
       typeof parsed !== "object" ||

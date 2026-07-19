@@ -31,10 +31,13 @@ describe("comparison handoff", () => {
     expect(readComparisonHandoff()).toBeNull();
   });
 
-  it("clears the entry after reading it once", () => {
+  it("can be read more than once without clearing the entry", () => {
     writeComparisonHandoff({ yearLabel: "2025/26", rows: sampleRows });
     readComparisonHandoff();
-    expect(readComparisonHandoff()).toBeNull();
+    expect(readComparisonHandoff()).toEqual({
+      yearLabel: "2025/26",
+      rows: sampleRows,
+    });
   });
 
   it("returns null for a malformed stored payload instead of throwing", () => {
