@@ -43,8 +43,39 @@ The app runs at http://localhost:3000.
 
 ## Current state
 
-Mobile readability fixes and a structured file import for the Compare page,
-reported directly against the live mobile app:
+Follow-up round: the previous mobile readability fixes did not actually
+resolve the reported chart squishing, because they treated the symptom
+(overlapping labels) rather than the cause. This round found and fixed the
+real cause, verified against a real headless-Chromium mobile viewport
+(Playwright, 375px, a seeded 12-month payslip dataset) rather than by code
+review alone:
+
+- **Root cause of the chart squishing.** `BracketBar` and `MonthlyBars` both
+  use `<figure>` as their outer wrapper. DaisyUI's card component applies
+  `display: flex; flex-direction: row; align-items: center; justify-content:
+  center` to every `<figure>` on the page, styling meant for a card's
+  thumbnail image. That silently turned each chart's stacked children into
+  centered, shrink-to-fit row items on any screen width, which is what was
+  actually crushing bracket labels together, not the label placement itself.
+  Fixed with one rule in `globals.css` (`figure { display: block; }`)
+  rather than override classes on every figure, consistent with the
+  existing `.input`/`.select`/`.textarea` max-width rule already in that
+  file for the same kind of DaisyUI base-style override.
+- **Results ledger table.** Separately, the SARS code sat in its own fixed
+  `w-20` column, leaving the description column too narrow on a 375px
+  viewport for anything but one word per line. The code now renders inline
+  as a small mono chip before the description on mobile, and keeps its own
+  column at `sm:` and up.
+- **Verified, not assumed.** Both fixes were confirmed by seeding a
+  representative `AppData` object into `localStorage` and driving the app
+  with Playwright at a 375px viewport: screenshots of Home, Results,
+  Deductions, and Compare, plus an end-to-end test of uploading a JSON file
+  into the Compare page's file input and confirming the comparison table
+  populated correctly.
+
+Previous round in this series (mobile readability fixes and a structured
+file import for the Compare page, reported directly against the live
+mobile app):
 
 - **Bracket chart legibility.** `BracketBar` (used on the dashboard and the
   Results page's marginal rate chart) used to print each bracket's rate
