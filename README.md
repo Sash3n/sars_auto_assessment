@@ -43,6 +43,75 @@ The app runs at http://localhost:3000.
 
 ## Current state
 
+This round adds an ITA34-styled document view: the estimated assessment (or
+a Compare-page comparison) rendered in the visual language of the real SARS
+Notice of Assessment, for onscreen review, printing to PDF, and side by side
+comparison, covering income and deduction categories the sample data may not
+happen to show, not just the ones a given user currently has.
+
+- **The statement document (`/statement`).** `src/lib/document/statement.ts`
+  reshapes an already-computed `Assessment` into the ITA34's own section
+  layout: Balance of Account, Assessment Summary Information, Tax
+  calculation, Income grouped by category (Employment income [IRP5/IT3(a)],
+  Local Interest Income, Local Rental Income, Other Income, Capital Gains,
+  only the categories that have data), Deductions allowed, Taxable income
+  with the SARS rating percentage, and narrative Notes (interest exemption,
+  the section 11F retirement cap, the CGT annual exclusion, plus the
+  assessment's own warnings). No tax is calculated here, only presented, so
+  it stays outside `tax-engine`. `Ita34Document.tsx` renders it with navy
+  section banners, steel-blue column headers, and bordered tables matching
+  the real document's look, independent of the app's own emerald/slate
+  theme (a document should look like paper regardless of light or dark
+  mode), with a persistent "not an official SARS document" banner on screen
+  and in print, not only a print-only header.
+- **Compare mode.** The Compare page's already-computed comparison rows
+  (`ComparisonRow[]`) are handed to the same document as a three-column
+  variance layout, Your calculation / SARS assessment / Variance, grouped
+  the same way the Compare table already groups rows. The parsed SARS
+  figures live only in the Compare page's component state, never in
+  `AppData`, so they cross to the `/statement?mode=compare` route through a
+  small sessionStorage handoff (`src/lib/document/handoff.ts`), tab-scoped
+  and read without clearing (clearing on read broke under React Strict
+  Mode's dev double-invocation, the second call would see the entry already
+  gone). A missing or malformed handoff falls back to the solo view.
+- **Two lines that were previously invisible to Compare now have SARS
+  codes.** Net rental income and the taxable capital gain line in
+  `composeAssessment` carried no code, and section 18A donations carried no
+  code either, so `compareAssessments` (which skips uncoded lines) never
+  surfaced them even when they differed from SARS. They now carry codes
+  4210, 4250, and 4011 respectively, sourced from the published SARS source
+  code list, so a mismatch on rental, CGT, or donations now shows up in the
+  Compare table and the comparison statement, where before it was silently
+  skipped.
+- `groupComparisonRows`, previously private to `ComparePage.tsx`, is now
+  exported from `src/lib/tax-engine/compare.ts` so the Compare table and the
+  comparison statement group rows identically instead of two
+  implementations drifting apart.
+- Print CSS: the existing print stylesheet forces a white background on
+  html/body, which does not reach the statement's own navy and steel-blue
+  backgrounds, but browsers still strip non-white backgrounds from print
+  output by default. A rule scoped to `.ita34-doc` opts back in with
+  `print-color-adjust: exact`, and an `@page` rule sets A4 size and margins.
+
+How it is tested: written test-first, `assessment.test.ts` and
+`compare.test.ts` assert the new codes and `groupComparisonRows`'s grouping
+before the implementation existed. `src/lib/document/__tests__/statement.test.ts`
+covers category ordering, the exempt-interest adjustment line's placement,
+a single deductions section, the summary and taxable-income figures, the
+refund versus payable framing, and that empty categories are omitted
+entirely rather than zero-filled. `handoff.test.ts` covers the round trip,
+a missing entry, reading twice without clearing, and a malformed payload.
+`StatementPage.test.tsx` covers the solo layout, the comparison layout with
+a handoff present, and the fallback when `mode=compare` has no handoff to
+read. The full suite, lint, typecheck, and build pass locally.
+
+Research links consulted: SARS's source code finder
+(https://www.sars.gov.za/types-of-tax/personal-income-tax/filing-season/find-a-source-code/)
+for the rental, capital gain, and donations codes, and TaxTim's summary of
+the capital gains tax source codes
+(https://www.taxtim.com/za/blog/the-new-capital-gains-tax-source-codes) as a
+cross-check.
+
 This round closes the remaining gaps between the original Stitch design
 mockups and the shipped app, and adds three genuinely new tax features.
 

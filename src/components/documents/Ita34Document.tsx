@@ -243,13 +243,13 @@ function ComparisonDocument({ comparison }: ComparisonProps) {
                     {row.description}
                   </td>
                   <td className="currency border-t border-[#8ea9c7]/40 px-4 py-1.5 text-right">
-                    {row.mineAmount === null ? "—" : formatRand(row.mineAmount)}
+                    {row.mineAmount === null ? "" : formatRand(row.mineAmount)}
                   </td>
                   <td className="currency border-t border-[#8ea9c7]/40 px-4 py-1.5 text-right">
-                    {row.sarsAmount === null ? "—" : formatRand(row.sarsAmount)}
+                    {row.sarsAmount === null ? "" : formatRand(row.sarsAmount)}
                   </td>
                   <td className="currency border-t border-[#8ea9c7]/40 px-4 py-1.5 text-right">
-                    {row.delta === null ? "—" : formatRand(row.delta)}
+                    {row.delta === null ? "" : formatRand(row.delta)}
                   </td>
                 </tr>
               ))}
