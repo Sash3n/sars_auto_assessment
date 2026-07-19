@@ -138,6 +138,22 @@
   outline-offset: 2px;
 }
 
+/*
+ * Keep form controls inside their container on narrow screens. Native date
+ * and number inputs carry an intrinsic min-width (the spinner and the
+ * yyyy/mm/dd placeholder) that can otherwise push a grid cell, and the whole
+ * card, wider than the mobile viewport. Capping width and letting the
+ * flex/grid wrapper shrink to zero keeps them contained.
+ */
+.input,
+.select,
+.textarea {
+  max-width: 100%;
+}
+.form-control {
+  min-width: 0;
+}
+
 /* Respect the user's motion preference across the whole app. */
 @media (prefers-reduced-motion: reduce) {
   *,
