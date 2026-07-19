@@ -43,6 +43,56 @@ The app runs at http://localhost:3000.
 
 ## Current state
 
+Mobile readability fixes and a structured file import for the Compare page,
+reported directly against the live mobile app:
+
+- **Bracket chart legibility.** `BracketBar` (used on the dashboard and the
+  Results page's marginal rate chart) used to print each bracket's rate
+  label inside its own segment. On a linear rand scale the lower brackets
+  are only a few percent of the bar's width, so their labels overlapped
+  into unreadable text on narrow screens. Rate labels now live in a
+  wrapping legend row below the bar instead, with a coloured swatch per
+  rate and the taxpayer's active bracket marked "(you)", so every rate
+  stays legible at any width. The segment bar itself is unchanged, only
+  where the text renders moved.
+- **Monthly income and PAYE chart.** `MonthlyBars` is a fixed-viewBox SVG
+  that scales down uniformly on narrow screens, shrinking axis and month
+  labels below a readable size. It now sits in a horizontal-scroll wrapper
+  with an explicit minimum width, so the chart keeps its designed font
+  size and scrolls horizontally on mobile rather than shrinking illegibly.
+- **Form fields overflowing their card on mobile.** Native `date` and
+  `number` inputs (Taxpayer details, dependents, the travel logbook
+  section) carry an intrinsic minimum width that could push a grid cell,
+  and the whole card, wider than the viewport, driving text and inputs off
+  the right edge. Fixed globally in `globals.css`: DaisyUI's `.input`,
+  `.select`, and `.textarea` are capped at `max-width: 100%`, and
+  `.form-control` wrappers get `min-width: 0` so they can actually shrink
+  inside a CSS grid, which is what the overflow needed.
+- **JSON and Excel import for the SARS comparison.** The Compare page
+  previously only accepted pasted ITA34 text. `src/lib/extraction/ita34-import.ts`
+  adds two more paths into the same `ParsedIta34` shape: `parseIta34Json`
+  (accepts a `{codes, summary}` object, a flat code/label map, or an array
+  of row objects or tuples) and `parseIta34Workbook` (reads the first sheet
+  of an uploaded `.xlsx`/`.xls`/`.csv` file via SheetJS, matching 4-digit
+  SARS codes and known summary labels per row). Both follow the existing
+  rule: a figure that cannot be read stays absent, never assumed to be
+  zero. SheetJS is dynamically imported so it only loads when a file is
+  actually chosen, not in the main bundle. The npm registry build of
+  `xlsx` carries unpatched high-severity advisories (prototype pollution,
+  ReDoS) with no fix available, a real concern for a library parsing
+  untrusted user uploads, so the dependency is pinned to the vendor's own
+  patched build (`xlsx@0.20.3` from `cdn.sheetjs.com`) instead of the
+  npm-registry package.
+
+How it is tested: `src/lib/extraction/__tests__/ita34-import.test.ts` covers
+amount coercion (formatted strings, decimal commas, trailing-minus
+negatives), all three JSON shapes, the row-mapping helper, and a real
+xlsx-round-trip test (writes a workbook with SheetJS, reads it back through
+`parseIta34Workbook`). The chart and form-overflow fixes are layout-only, no
+new business logic, verified by running the existing suite unchanged (354
+tests passing) plus a manual check of the built pages. No tax-engine
+calculation changed, so no rand-figure tests were needed.
+
 This round closes the remaining gaps between the original Stitch design
 mockups and the shipped app, and adds three genuinely new tax features.
 
