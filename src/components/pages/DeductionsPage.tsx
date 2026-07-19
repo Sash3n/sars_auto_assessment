@@ -366,6 +366,7 @@ export default function DeductionsPage() {
                 step={0.1}
                 className="input input-bordered w-full"
                 value={profile.homeOfficeAreaM2 || ""}
+                placeholder="0"
                 aria-label="Office area in square metres"
                 onChange={(event) => {
                   const value = Number.parseFloat(event.target.value);
@@ -389,6 +390,7 @@ export default function DeductionsPage() {
                 step={0.1}
                 className="input input-bordered w-full"
                 value={profile.homeTotalAreaM2 || ""}
+                placeholder="0"
                 aria-label="Total home area in square metres"
                 onChange={(event) => {
                   const value = Number.parseFloat(event.target.value);
@@ -483,6 +485,7 @@ export default function DeductionsPage() {
                 min={0}
                 className="input input-bordered w-full"
                 value={travel.totalKm || ""}
+                placeholder="0"
                 aria-label="Total kilometres for the year"
                 onChange={(event) => {
                   const value = Number.parseFloat(event.target.value);
@@ -504,6 +507,7 @@ export default function DeductionsPage() {
                 min={0}
                 className="input input-bordered w-full"
                 value={travel.businessKm || ""}
+                placeholder="0"
                 aria-label="Business kilometres from the logbook"
                 onChange={(event) => {
                   const value = Number.parseFloat(event.target.value);
