@@ -55,6 +55,8 @@ export interface Assessment {
   netAmount: number;
   /** SARS "Rating percentage": tax over taxable income. */
   effectiveRatePercent: number;
+  /** Gross payroll remuneration, the section 11F percentage base component. */
+  remuneration: number;
   provisionalTaxpayerLikely: boolean;
   retirement: {
     contributions: number;
@@ -346,6 +348,7 @@ export function composeAssessment(
       taxableIncome > 0
         ? Math.round((assessedTaxAfterRebates / taxableIncome) * 10_000) / 100
         : 0,
+    remuneration: payroll.grossPayrollIncome,
     provisionalTaxpayerLikely: nonPayeIncome > PROVISIONAL_INCOME_THRESHOLD,
     retirement: {
       contributions: retirementContributions,

@@ -104,6 +104,10 @@ describe("composeAssessment, full 2025/26 reference scenario", () => {
     expect(assessment.incomeTotal).toBe(559_200);
   });
 
+  it("reports total remuneration for the section 11F narrative", () => {
+    expect(assessment.remuneration).toBe(439_000);
+  });
+
   it("allows the full retirement deduction under code 4029", () => {
     expect(assessment.retirement.contributions).toBe(61_600);
     expect(assessment.retirement.allowed).toBe(61_600);
