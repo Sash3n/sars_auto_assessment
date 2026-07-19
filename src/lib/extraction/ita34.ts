@@ -42,6 +42,38 @@ const SUMMARY_PATTERNS: [keyof ParsedIta34["summary"], RegExp][] = [
   ["assessmentResult", /assessment result/i],
 ];
 
+/** The summary keys, used by importers to accept literal-key JSON payloads. */
+export const SUMMARY_KEYS: (keyof ParsedIta34["summary"])[] = [
+  "taxableIncome",
+  "assessedTaxAfterRebates",
+  "taxCredits",
+  "assessmentResult",
+];
+
+/*
+ * Resolve a free-text label (an ITA34 row label, a JSON key, a spreadsheet
+ * cell) to one of the four summary keys. Accepts both the human label
+ * ("Taxable income") and the literal key ("taxableIncome"), so pasted text,
+ * JSON, and Excel all funnel through the same mapping.
+ */
+export function resolveSummaryKey(
+  label: string,
+): keyof ParsedIta34["summary"] | null {
+  const trimmed = label.trim();
+  const direct = SUMMARY_KEYS.find(
+    (key) => key.toLowerCase() === trimmed.toLowerCase(),
+  );
+  if (direct) {
+    return direct;
+  }
+  for (const [key, pattern] of SUMMARY_PATTERNS) {
+    if (pattern.test(trimmed)) {
+      return key;
+    }
+  }
+  return null;
+}
+
 export function parseIta34Text(rawText: string): ParsedIta34 {
   const parsed: ParsedIta34 = { codes: {}, summary: {}, warnings: [] };
 

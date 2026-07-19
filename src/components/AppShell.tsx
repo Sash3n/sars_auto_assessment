@@ -253,7 +253,14 @@ export default function AppShell({ children }: { children: ReactNode }) {
             <p>Not tax advice. Not affiliated with or endorsed by SARS.</p>
           </div>
         </footer>
-        <div className="border-t border-base-300 bg-base-100 pb-20 lg:hidden print:hidden">
+        {/*
+          pb-28 clears the bottom-tab dock (fixed, ~60px) plus a page's own
+          StickyActionBar when one is rendered (fixed above the dock,
+          ~100px combined). pb-20 only cleared the dock alone, so on any
+          page with a StickyActionBar (Deductions, Results, Other Income)
+          the top of that bar covered this disclaimer's last line.
+        */}
+        <div className="border-t border-base-300 bg-base-100 pb-28 lg:hidden print:hidden">
           <div className="px-4 py-4 text-xs opacity-70">
             <p>
               Not an official SARS application. For estimation purposes only.

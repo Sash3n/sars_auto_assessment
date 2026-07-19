@@ -28,8 +28,15 @@ function AmountRow({
   return (
     <>
       <tr className={strong ? "font-semibold" : "hover:bg-base-200"}>
-        <td className="w-20 font-mono text-xs opacity-60">{code ?? ""}</td>
-        <td>
+        <td className="hidden w-20 align-top font-mono text-xs opacity-60 sm:table-cell">
+          {code ?? ""}
+        </td>
+        <td className="align-top">
+          {code ? (
+            <span className="mr-1.5 font-mono text-xs opacity-60 sm:hidden">
+              {code}
+            </span>
+          ) : null}
           {description}
           {trace ? (
             <button
@@ -41,7 +48,7 @@ function AmountRow({
             </button>
           ) : null}
         </td>
-        <td className="currency text-right">{formatRand(amount)}</td>
+        <td className="currency text-right align-top">{formatRand(amount)}</td>
       </tr>
       {trace && expanded ? (
         <tr>

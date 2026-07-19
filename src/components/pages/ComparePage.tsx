@@ -5,6 +5,10 @@ import { useMemo, useState } from "react";
 import CurrencyField from "@/components/fields/CurrencyField";
 import { writeComparisonHandoff } from "@/lib/document/handoff";
 import { parseIta34Text, type ParsedIta34 } from "@/lib/extraction/ita34";
+import {
+  parseIta34Json,
+  parseIta34Workbook,
+} from "@/lib/extraction/ita34-import";
 import { formatRand } from "@/lib/format";
 import { useActiveYear } from "@/lib/store/StoreProvider";
 import { composeAssessment } from "@/lib/tax-engine/assessment";
@@ -140,6 +144,32 @@ export default function ComparePage() {
   const [threshold, setThreshold] = useState(5);
   const [overrides, setOverrides] = useState<Record<string, number>>({});
   const [shareNotice, setShareNotice] = useState<string | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
+
+  async function handleFileImport(file: File) {
+    setImportError(null);
+    setOverrides({});
+    const name = file.name.toLowerCase();
+    try {
+      if (name.endsWith(".json")) {
+        setParsed(parseIta34Json(await file.text()));
+      } else if (
+        name.endsWith(".xlsx") ||
+        name.endsWith(".xls") ||
+        name.endsWith(".csv")
+      ) {
+        setParsed(await parseIta34Workbook(await file.arrayBuffer()));
+      } else {
+        setImportError(
+          "Unsupported file type. Import a .json, .xlsx, .xls, or .csv file, or paste the text above.",
+        );
+      }
+    } catch {
+      setImportError(
+        "The file could not be read. Check that it is a valid JSON or spreadsheet export.",
+      );
+    }
+  }
 
   const effectiveSars: ParsedIta34 | null = useMemo(() => {
     if (!parsed) {
@@ -234,10 +264,11 @@ export default function ComparePage() {
           Compare with SARS
         </h2>
         <p className="mt-1 text-sm opacity-70">
-          Paste the text of your SARS auto-assessment (ITA34) below. Each
-          line is diffed against your calculated {tables.label} assessment,
-          by SARS code. Figures that cannot be read show as not available and
-          can be filled in manually, they are never assumed to be zero.
+          Paste the text of your SARS auto-assessment (ITA34), or import it as
+          a JSON or Excel file. Each line is diffed against your calculated{" "}
+          {tables.label} assessment, by SARS code. Figures that cannot be read
+          show as not available and can be filled in manually, they are never
+          assumed to be zero.
         </p>
       </div>
 
@@ -251,6 +282,32 @@ export default function ComparePage() {
             value={pasted}
             onChange={(event) => setPasted(event.target.value)}
           />
+          <div className="flex flex-col gap-2 rounded-box border border-dashed border-base-300 p-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-medium">Or import a file</p>
+              <p className="text-xs opacity-60">
+                JSON, Excel (.xlsx/.xls), or CSV. Read on this device only.
+              </p>
+            </div>
+            <input
+              type="file"
+              accept=".json,.xlsx,.xls,.csv"
+              className="file-input file-input-bordered file-input-sm w-full sm:w-auto"
+              aria-label="Import a JSON or Excel assessment file"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) {
+                  void handleFileImport(file);
+                }
+                event.target.value = "";
+              }}
+            />
+          </div>
+          {importError ? (
+            <div role="alert" className="alert alert-error">
+              <span>{importError}</span>
+            </div>
+          ) : null}
           <div className="card-actions flex-col items-stretch justify-between sm:flex-row sm:items-end">
             <label className="form-control">
               <span className="label-caps mb-1 block opacity-70">

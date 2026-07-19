@@ -112,6 +112,126 @@ the capital gains tax source codes
 (https://www.taxtim.com/za/blog/the-new-capital-gains-tax-source-codes) as a
 cross-check.
 
+A third mobile issue found from live screenshots, same PR, same round of
+testing as the two below:
+
+- **Checkbox labels bleeding off the card on mobile.** DaisyUI's `.label`
+  sets `white-space: nowrap`, built for a short label like "Remember me".
+  Every checkbox label in this app is a full sentence instead ("I or a
+  member of my household have a SARS-recognised disability..."), so on
+  mobile the text could not break at all and ran the row, and visually the
+  whole card, off the right edge of the viewport. Fixing the wrap needed
+  two more rules underneath, the same `min-width: auto` default at two
+  levels (the label as a CSS grid item inside a column track that only
+  exists at `sm:` and up, and the label's text span as a flex child of the
+  label). Verified against a real mobile viewport: the disability label
+  went from a 738px-wide row on a 390px viewport to wrapping across three
+  lines inside the card; confirmed desktop is unaffected.
+
+Two more mobile issues found from live screenshots, in the same PR as the
+figure-flex fix below since both came from the same round of user testing:
+
+- **Blank m² and kilometre fields on Deductions.** Office area, total home
+  area, total kilometres, and business kilometres all render their value as
+  an empty string when 0 (so the user isn't stuck looking at a literal "0"
+  while typing a real figure), but had no placeholder to fill that gap.
+  Next to currency fields on the same page, which always show something
+  (`R` plus `0.00`), a box with nothing in it at all reads as broken rather
+  than just unset, especially in dark mode. Fixed by adding a `0`
+  placeholder to all four; they were the only inputs in the codebase using
+  the `value={x || ""}` pattern without one.
+- **Mobile legal disclaimer hidden under the sticky bars.** The mobile
+  disclaimer block in `AppShell.tsx` reserved just enough bottom padding to
+  clear the bottom-tab dock nav alone. Deductions, Results, and Other
+  Income each also render a `StickyActionBar` above the dock, and combined
+  the two fixed bars covered the disclaimer's last line. Fixed with one
+  padding bump (`pb-20` to `pb-28`) rather than threading sticky-bar
+  awareness from three pages into the shell. Verified by measuring the
+  disclaimer text's bounding box against the sticky bar's on a real
+  headless-Chromium mobile viewport: a 24.6px clear gap now, where it
+  previously overlapped.
+
+Follow-up round: the previous mobile readability fixes did not actually
+resolve the reported chart squishing, because they treated the symptom
+(overlapping labels) rather than the cause. This round found and fixed the
+real cause, verified against a real headless-Chromium mobile viewport
+(Playwright, 375px, a seeded 12-month payslip dataset) rather than by code
+review alone:
+
+- **Root cause of the chart squishing.** `BracketBar` and `MonthlyBars` both
+  use `<figure>` as their outer wrapper. DaisyUI's card component applies
+  `display: flex; flex-direction: row; align-items: center; justify-content:
+  center` to every `<figure>` on the page, styling meant for a card's
+  thumbnail image. That silently turned each chart's stacked children into
+  centered, shrink-to-fit row items on any screen width, which is what was
+  actually crushing bracket labels together, not the label placement itself.
+  Fixed with one rule in `globals.css` (`figure { display: block; }`)
+  rather than override classes on every figure, consistent with the
+  existing `.input`/`.select`/`.textarea` max-width rule already in that
+  file for the same kind of DaisyUI base-style override.
+- **Results ledger table.** Separately, the SARS code sat in its own fixed
+  `w-20` column, leaving the description column too narrow on a 375px
+  viewport for anything but one word per line. The code now renders inline
+  as a small mono chip before the description on mobile, and keeps its own
+  column at `sm:` and up.
+- **Verified, not assumed.** Both fixes were confirmed by seeding a
+  representative `AppData` object into `localStorage` and driving the app
+  with Playwright at a 375px viewport: screenshots of Home, Results,
+  Deductions, and Compare, plus an end-to-end test of uploading a JSON file
+  into the Compare page's file input and confirming the comparison table
+  populated correctly.
+
+Previous round in this series (mobile readability fixes and a structured
+file import for the Compare page, reported directly against the live
+mobile app):
+
+- **Bracket chart legibility.** `BracketBar` (used on the dashboard and the
+  Results page's marginal rate chart) used to print each bracket's rate
+  label inside its own segment. On a linear rand scale the lower brackets
+  are only a few percent of the bar's width, so their labels overlapped
+  into unreadable text on narrow screens. Rate labels now live in a
+  wrapping legend row below the bar instead, with a coloured swatch per
+  rate and the taxpayer's active bracket marked "(you)", so every rate
+  stays legible at any width. The segment bar itself is unchanged, only
+  where the text renders moved.
+- **Monthly income and PAYE chart.** `MonthlyBars` is a fixed-viewBox SVG
+  that scales down uniformly on narrow screens, shrinking axis and month
+  labels below a readable size. It now sits in a horizontal-scroll wrapper
+  with an explicit minimum width, so the chart keeps its designed font
+  size and scrolls horizontally on mobile rather than shrinking illegibly.
+- **Form fields overflowing their card on mobile.** Native `date` and
+  `number` inputs (Taxpayer details, dependents, the travel logbook
+  section) carry an intrinsic minimum width that could push a grid cell,
+  and the whole card, wider than the viewport, driving text and inputs off
+  the right edge. Fixed globally in `globals.css`: DaisyUI's `.input`,
+  `.select`, and `.textarea` are capped at `max-width: 100%`, and
+  `.form-control` wrappers get `min-width: 0` so they can actually shrink
+  inside a CSS grid, which is what the overflow needed.
+- **JSON and Excel import for the SARS comparison.** The Compare page
+  previously only accepted pasted ITA34 text. `src/lib/extraction/ita34-import.ts`
+  adds two more paths into the same `ParsedIta34` shape: `parseIta34Json`
+  (accepts a `{codes, summary}` object, a flat code/label map, or an array
+  of row objects or tuples) and `parseIta34Workbook` (reads the first sheet
+  of an uploaded `.xlsx`/`.xls`/`.csv` file via SheetJS, matching 4-digit
+  SARS codes and known summary labels per row). Both follow the existing
+  rule: a figure that cannot be read stays absent, never assumed to be
+  zero. SheetJS is dynamically imported so it only loads when a file is
+  actually chosen, not in the main bundle. The npm registry build of
+  `xlsx` carries unpatched high-severity advisories (prototype pollution,
+  ReDoS) with no fix available, a real concern for a library parsing
+  untrusted user uploads, so the dependency is pinned to the vendor's own
+  patched build (`xlsx@0.20.3` from `cdn.sheetjs.com`) instead of the
+  npm-registry package.
+
+How it is tested: `src/lib/extraction/__tests__/ita34-import.test.ts` covers
+amount coercion (formatted strings, decimal commas, trailing-minus
+negatives), all three JSON shapes, the row-mapping helper, and a real
+xlsx-round-trip test (writes a workbook with SheetJS, reads it back through
+`parseIta34Workbook`). The chart and form-overflow fixes are layout-only, no
+new business logic, verified by running the existing suite unchanged (354
+tests passing) plus a manual check of the built pages. No tax-engine
+calculation changed, so no rand-figure tests were needed.
+
 This round closes the remaining gaps between the original Stitch design
 mockups and the shipped app, and adds three genuinely new tax features.
 

@@ -62,9 +62,10 @@ export default function MonthlyBars({ points }: { points: MonthlyPoint[] }) {
           PAYE
         </span>
       </div>
+      <div className="overflow-x-auto">
       <svg
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
-        className="w-full"
+        className="h-auto w-full min-w-[560px]"
         role="img"
         aria-label="Monthly income and PAYE across the tax year"
       >
@@ -81,9 +82,9 @@ export default function MonthlyBars({ points }: { points: MonthlyPoint[] }) {
             />
             <text
               x={PAD_LEFT - 6}
-              y={y(max * fraction) + 3}
+              y={y(max * fraction) + 4}
               textAnchor="end"
-              fontSize={10}
+              fontSize={12}
               fill="currentColor"
               opacity={0.6}
             >
@@ -130,9 +131,9 @@ export default function MonthlyBars({ points }: { points: MonthlyPoint[] }) {
               ) : null}
               <text
                 x={groupX}
-                y={HEIGHT - 8}
+                y={HEIGHT - 7}
                 textAnchor="middle"
-                fontSize={10}
+                fontSize={12}
                 fill="currentColor"
                 opacity={0.6}
               >
@@ -142,6 +143,7 @@ export default function MonthlyBars({ points }: { points: MonthlyPoint[] }) {
           );
         })}
       </svg>
+      </div>
       <details className="mt-2">
         <summary className="cursor-pointer text-xs opacity-60">
           Monthly table
