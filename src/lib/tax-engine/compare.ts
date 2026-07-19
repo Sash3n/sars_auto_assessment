@@ -122,3 +122,51 @@ export function compareAssessments(
 
   return rows;
 }
+
+export type ComparisonGroupTitle =
+  | "Income"
+  | "Deductions and allowances"
+  | "Tax liability and result";
+
+export interface ComparisonGroup {
+  title: ComparisonGroupTitle;
+  rows: ComparisonRow[];
+}
+
+const GROUP_ORDER: ComparisonGroupTitle[] = [
+  "Income",
+  "Deductions and allowances",
+  "Tax liability and result",
+];
+
+function groupTitleFor(row: ComparisonRow): ComparisonGroupTitle {
+  if (row.key) {
+    return "Tax liability and result";
+  }
+  if (row.code?.startsWith("40")) {
+    return "Deductions and allowances";
+  }
+  return "Income";
+}
+
+/*
+ * Groups comparison rows the same way the Compare page's table does, so the
+ * ITA34-styled document reuses the exact same grouping instead of a second
+ * implementation drifting out of sync. Groups with no rows are omitted.
+ */
+export function groupComparisonRows(rows: ComparisonRow[]): ComparisonGroup[] {
+  const byTitle = new Map<ComparisonGroupTitle, ComparisonRow[]>();
+  for (const row of rows) {
+    const title = groupTitleFor(row);
+    const existing = byTitle.get(title);
+    if (existing) {
+      existing.push(row);
+    } else {
+      byTitle.set(title, [row]);
+    }
+  }
+  return GROUP_ORDER.filter((title) => byTitle.has(title)).map((title) => ({
+    title,
+    rows: byTitle.get(title)!,
+  }));
+}

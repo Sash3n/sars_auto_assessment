@@ -8,6 +8,7 @@ import { useActiveYear } from "@/lib/store/StoreProvider";
 import { composeAssessment } from "@/lib/tax-engine/assessment";
 import {
   compareAssessments,
+  groupComparisonRows,
   type ComparisonRow,
 } from "@/lib/tax-engine/compare";
 import {
@@ -121,24 +122,6 @@ function StatusIndicator({ status }: { status: ComparisonRow["status"] }) {
   );
 }
 
-type RowGroup = "income" | "deductions" | "summary";
-
-const GROUP_TITLES: Record<RowGroup, string> = {
-  income: "Income",
-  deductions: "Deductions and allowances",
-  summary: "Tax liability and result",
-};
-
-function groupFor(row: ComparisonRow): RowGroup {
-  if (row.key) {
-    return "summary";
-  }
-  if (row.code?.startsWith("40")) {
-    return "deductions";
-  }
-  return "income";
-}
-
 export default function ComparePage() {
   const year = useActiveYear();
   const tables = getTaxYear(year.taxYearId);
@@ -206,17 +189,7 @@ export default function ComparePage() {
     finalRow && finalRow.mineAmount !== null && finalRow.sarsAmount !== null
       ? finalRow.mineAmount - finalRow.sarsAmount
       : null;
-  const grouped = useMemo(() => {
-    const groups: Record<RowGroup, ComparisonRow[]> = {
-      income: [],
-      deductions: [],
-      summary: [],
-    };
-    for (const row of rows) {
-      groups[groupFor(row)].push(row);
-    }
-    return groups;
-  }, [rows]);
+  const groups = useMemo(() => groupComparisonRows(rows), [rows]);
   const objectionLines = useMemo(() => buildObjectionSummary(rows), [rows]);
   const objectionText = useMemo(
     () => formatObjectionSummaryText(objectionLines, tables.label),
@@ -403,21 +376,16 @@ export default function ComparePage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {(
-                      ["income", "deductions", "summary"] as RowGroup[]
-                    ).flatMap((group) =>
-                      grouped[group].length === 0
-                        ? []
-                        : [
-                            <tr key={`head-${group}`}>
-                              <th
-                                colSpan={6}
-                                className="label-caps bg-base-200/60 opacity-70"
-                              >
-                                {GROUP_TITLES[group]}
-                              </th>
-                            </tr>,
-                            ...grouped[group].map((row) => (
+                    {groups.flatMap((group) => [
+                      <tr key={`head-${group.title}`}>
+                        <th
+                          colSpan={6}
+                          className="label-caps bg-base-200/60 opacity-70"
+                        >
+                          {group.title}
+                        </th>
+                      </tr>,
+                      ...group.rows.map((row) => (
                               <tr
                                 key={row.code ?? row.key ?? row.description}
                                 className={
@@ -483,22 +451,17 @@ export default function ComparePage() {
                                   <StatusIndicator status={row.status} />
                                 </td>
                               </tr>
-                            )),
-                          ],
-                    )}
+                      )),
+                    ])}
                   </tbody>
                 </table>
               </div>
 
               <div className="space-y-3 sm:hidden">
-                {(["income", "deductions", "summary"] as RowGroup[]).map(
-                  (group) =>
-                    grouped[group].length === 0 ? null : (
-                      <div key={group} className="space-y-2">
-                        <p className="label-caps opacity-70">
-                          {GROUP_TITLES[group]}
-                        </p>
-                        {grouped[group].map((row) => (
+                {groups.map((group) => (
+                  <div key={group.title} className="space-y-2">
+                    <p className="label-caps opacity-70">{group.title}</p>
+                    {group.rows.map((row) => (
                           <div
                             key={row.code ?? row.key ?? row.description}
                             className={`rounded-box border p-3 ${
@@ -568,10 +531,9 @@ export default function ComparePage() {
                               </div>
                             ) : null}
                           </div>
-                        ))}
-                      </div>
-                    ),
-                )}
+                    ))}
+                  </div>
+                ))}
               </div>
 
               <p className="text-xs opacity-60">

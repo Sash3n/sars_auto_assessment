@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { compareAssessments } from "@/lib/tax-engine/compare";
+import {
+  compareAssessments,
+  groupComparisonRows,
+} from "@/lib/tax-engine/compare";
 import { composeAssessment } from "@/lib/tax-engine/assessment";
 import { getTaxYear } from "@/lib/tax-engine/tax-tables";
-import { emptyPayslip, emptyYear } from "@/lib/model/defaults";
+import { emptyPayslip, emptyRental, emptyYear } from "@/lib/model/defaults";
 import type { ParsedIta34 } from "@/lib/extraction/ita34";
 
 const y2025 = getTaxYear("2025-26");
@@ -90,5 +93,83 @@ describe("compareAssessments", () => {
     expect(line3801?.mineAmount).toBeNull();
     expect(line3801?.sarsAmount).toBe(5_000);
     expect(line3801?.status).toBe("mismatch");
+  });
+
+  it("compares the coded rental income line, 4210", () => {
+    const year = emptyYear("2025-26");
+    year.profile.dateOfBirth = "1990-06-15";
+    year.rentals = [
+      {
+        ...emptyRental(),
+        name: "Garden flat",
+        rentalIncome: 120_000,
+        expenses: [{ id: "e1", label: "Levies", amount: 36_000 }],
+      },
+    ];
+    const mine = composeAssessment(year, y2025);
+    const sars = sarsSide({ codes: { "4210": 80_000 } });
+    const rows = compareAssessments(mine, sars, 5);
+    const line4210 = rows.find((row) => row.code === "4210");
+    expect(line4210?.mineAmount).toBe(84_000);
+    expect(line4210?.sarsAmount).toBe(80_000);
+    expect(line4210?.status).toBe("mismatch");
+  });
+
+  it("compares the coded taxable capital gain line, 4250", () => {
+    const year = emptyYear("2025-26");
+    year.profile.dateOfBirth = "1990-06-15";
+    year.disposals = [
+      {
+        id: "d1",
+        description: "Shares",
+        proceeds: 150_000,
+        baseCost: 50_000,
+        isPrimaryResidence: false,
+      },
+    ];
+    const mine = composeAssessment(year, y2025);
+    const sars = sarsSide({ codes: { "4250": 24_000 } });
+    const rows = compareAssessments(mine, sars, 5);
+    const line4250 = rows.find((row) => row.code === "4250");
+    expect(line4250?.mineAmount).toBe(24_000);
+    expect(line4250?.status).toBe("match");
+  });
+});
+
+describe("groupComparisonRows", () => {
+  it("groups coded income, coded deductions, and summary rows under stable titles", () => {
+    const mine = simpleAssessment();
+    const sars = sarsSide({
+      codes: { "3601": 360_000, "4210": 80_000, "4011": 2_000 },
+      summary: { taxableIncome: 360_000 },
+    });
+    const rows = compareAssessments(mine, sars, 5);
+    const groups = groupComparisonRows(rows);
+
+    const income = groups.find((group) => group.title === "Income");
+    expect(income?.rows.some((row) => row.code === "3601")).toBe(true);
+    expect(income?.rows.some((row) => row.code === "4210")).toBe(true);
+
+    const deductions = groups.find(
+      (group) => group.title === "Deductions and allowances",
+    );
+    expect(deductions?.rows.some((row) => row.code === "4011")).toBe(true);
+
+    const summary = groups.find(
+      (group) => group.title === "Tax liability and result",
+    );
+    expect(summary?.rows.some((row) => row.key === "taxableIncome")).toBe(
+      true,
+    );
+  });
+
+  it("omits empty groups", () => {
+    const mine = simpleAssessment();
+    const sars = sarsSide({ codes: { "3601": 360_000 } });
+    const rows = compareAssessments(mine, sars, 5).filter(
+      (row) => row.code === "3601",
+    );
+    const groups = groupComparisonRows(rows);
+    expect(groups.map((group) => group.title)).toEqual(["Income"]);
   });
 });
