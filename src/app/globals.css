@@ -154,6 +154,48 @@
   min-width: 0;
 }
 
+/*
+ * DaisyUI's .label sets white-space: nowrap (it is designed for a short,
+ * single-line label like "Remember me"), which this app's checkbox
+ * labels do not honour: every current use is a full explanatory sentence
+ * ("I or a member of my household have a SARS-recognised disability
+ * (changes the section 6B formula)"). With nowrap the text cannot break
+ * at all, so on mobile it just ran the row, and visually the whole card,
+ * off the right edge of the viewport instead of wrapping.
+ *
+ * Restoring normal wrapping only works once two stacked min-width:auto
+ * defaults are also cleared, the same underlying issue at two levels:
+ * the label is a grid item inside a "grid gap-4 sm:grid-cols-2" container
+ * that only gets an explicit column track at sm: and up, so below that
+ * its single implicit column grows to fit the label's content instead of
+ * the card's width (the classic CSS grid blowout); and the label's own
+ * text span, as a flex child of the label (DaisyUI's .label is a flex
+ * row), refuses to shrink below its content width for the same reason
+ * one level down. min-width: 0 on both breaks that chain.
+ */
+.label {
+  min-width: 0;
+  white-space: normal;
+}
+.label > span {
+  min-width: 0;
+}
+
+/*
+ * DaisyUI's card component applies display: flex, flex-direction: row,
+ * align-items: center, justify-content: center to every <figure> on the
+ * page (styling meant for a card's thumbnail image), regardless of where
+ * the figure sits. The chart components (BracketBar, MonthlyBars) use
+ * <figure> for its semantic caption pairing, not a card image, and that
+ * rule silently turned their stacked children into centered, shrink-to-fit
+ * row items, crushing chart labels together on narrow screens. Restored to
+ * normal block flow here rather than patching every figure with override
+ * classes.
+ */
+figure {
+  display: block;
+}
+
 /* Respect the user's motion preference across the whole app. */
 @media (prefers-reduced-motion: reduce) {
   *,

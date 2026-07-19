@@ -43,8 +43,78 @@ The app runs at http://localhost:3000.
 
 ## Current state
 
-Mobile readability fixes and a structured file import for the Compare page,
-reported directly against the live mobile app:
+A third mobile issue found from live screenshots, same PR, same round of
+testing as the two below:
+
+- **Checkbox labels bleeding off the card on mobile.** DaisyUI's `.label`
+  sets `white-space: nowrap`, built for a short label like "Remember me".
+  Every checkbox label in this app is a full sentence instead ("I or a
+  member of my household have a SARS-recognised disability..."), so on
+  mobile the text could not break at all and ran the row, and visually the
+  whole card, off the right edge of the viewport. Fixing the wrap needed
+  two more rules underneath, the same `min-width: auto` default at two
+  levels (the label as a CSS grid item inside a column track that only
+  exists at `sm:` and up, and the label's text span as a flex child of the
+  label). Verified against a real mobile viewport: the disability label
+  went from a 738px-wide row on a 390px viewport to wrapping across three
+  lines inside the card; confirmed desktop is unaffected.
+
+Two more mobile issues found from live screenshots, in the same PR as the
+figure-flex fix below since both came from the same round of user testing:
+
+- **Blank m² and kilometre fields on Deductions.** Office area, total home
+  area, total kilometres, and business kilometres all render their value as
+  an empty string when 0 (so the user isn't stuck looking at a literal "0"
+  while typing a real figure), but had no placeholder to fill that gap.
+  Next to currency fields on the same page, which always show something
+  (`R` plus `0.00`), a box with nothing in it at all reads as broken rather
+  than just unset, especially in dark mode. Fixed by adding a `0`
+  placeholder to all four; they were the only inputs in the codebase using
+  the `value={x || ""}` pattern without one.
+- **Mobile legal disclaimer hidden under the sticky bars.** The mobile
+  disclaimer block in `AppShell.tsx` reserved just enough bottom padding to
+  clear the bottom-tab dock nav alone. Deductions, Results, and Other
+  Income each also render a `StickyActionBar` above the dock, and combined
+  the two fixed bars covered the disclaimer's last line. Fixed with one
+  padding bump (`pb-20` to `pb-28`) rather than threading sticky-bar
+  awareness from three pages into the shell. Verified by measuring the
+  disclaimer text's bounding box against the sticky bar's on a real
+  headless-Chromium mobile viewport: a 24.6px clear gap now, where it
+  previously overlapped.
+
+Follow-up round: the previous mobile readability fixes did not actually
+resolve the reported chart squishing, because they treated the symptom
+(overlapping labels) rather than the cause. This round found and fixed the
+real cause, verified against a real headless-Chromium mobile viewport
+(Playwright, 375px, a seeded 12-month payslip dataset) rather than by code
+review alone:
+
+- **Root cause of the chart squishing.** `BracketBar` and `MonthlyBars` both
+  use `<figure>` as their outer wrapper. DaisyUI's card component applies
+  `display: flex; flex-direction: row; align-items: center; justify-content:
+  center` to every `<figure>` on the page, styling meant for a card's
+  thumbnail image. That silently turned each chart's stacked children into
+  centered, shrink-to-fit row items on any screen width, which is what was
+  actually crushing bracket labels together, not the label placement itself.
+  Fixed with one rule in `globals.css` (`figure { display: block; }`)
+  rather than override classes on every figure, consistent with the
+  existing `.input`/`.select`/`.textarea` max-width rule already in that
+  file for the same kind of DaisyUI base-style override.
+- **Results ledger table.** Separately, the SARS code sat in its own fixed
+  `w-20` column, leaving the description column too narrow on a 375px
+  viewport for anything but one word per line. The code now renders inline
+  as a small mono chip before the description on mobile, and keeps its own
+  column at `sm:` and up.
+- **Verified, not assumed.** Both fixes were confirmed by seeding a
+  representative `AppData` object into `localStorage` and driving the app
+  with Playwright at a 375px viewport: screenshots of Home, Results,
+  Deductions, and Compare, plus an end-to-end test of uploading a JSON file
+  into the Compare page's file input and confirming the comparison table
+  populated correctly.
+
+Previous round in this series (mobile readability fixes and a structured
+file import for the Compare page, reported directly against the live
+mobile app):
 
 - **Bracket chart legibility.** `BracketBar` (used on the dashboard and the
   Results page's marginal rate chart) used to print each bracket's rate
