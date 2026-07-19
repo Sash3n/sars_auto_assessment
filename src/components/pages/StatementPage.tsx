@@ -34,8 +34,8 @@ export default function StatementPage() {
     [year, tables],
   );
   const statementDocument = useMemo(
-    () => buildStatementDocument(assessment, tables),
-    [assessment, tables],
+    () => buildStatementDocument(assessment, tables, year),
+    [assessment, tables, year],
   );
 
   return (

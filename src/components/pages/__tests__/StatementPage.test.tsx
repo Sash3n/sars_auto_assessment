@@ -21,6 +21,7 @@ afterEach(() => {
 function seedYear() {
   const data = emptyAppData();
   data.years["2025-26"].profile.dateOfBirth = "1990-06-15";
+  data.years["2025-26"].profile.medicalSchemeMonths = 12;
   data.years["2025-26"].payslips = [
     {
       ...emptyPayslip("2025-03"),
@@ -46,6 +47,18 @@ describe("StatementPage", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(/not an official sars document/i),
+    ).toBeInTheDocument();
+    // Revision 2 structure: the Details block, the two-amount-column
+    // headers, the Rebates umbrella, and the numbered medical note.
+    expect(screen.getByText("Year of assessment")).toBeInTheDocument();
+    expect(screen.getByText("Independent estimate")).toBeInTheDocument();
+    expect(
+      screen.getAllByText("Computations & adjustments").length,
+    ).toBeGreaterThan(0);
+    expect(screen.getByText("Rebates")).toBeInTheDocument();
+    expect(screen.getByText("Primary")).toBeInTheDocument();
+    expect(
+      screen.getByText(/medical rebates for persons below 65/i),
     ).toBeInTheDocument();
   });
 
