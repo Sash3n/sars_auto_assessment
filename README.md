@@ -43,6 +43,22 @@ The app runs at http://localhost:3000.
 
 ## Current state
 
+A third mobile issue found from live screenshots, same PR, same round of
+testing as the two below:
+
+- **Checkbox labels bleeding off the card on mobile.** DaisyUI's `.label`
+  sets `white-space: nowrap`, built for a short label like "Remember me".
+  Every checkbox label in this app is a full sentence instead ("I or a
+  member of my household have a SARS-recognised disability..."), so on
+  mobile the text could not break at all and ran the row, and visually the
+  whole card, off the right edge of the viewport. Fixing the wrap needed
+  two more rules underneath, the same `min-width: auto` default at two
+  levels (the label as a CSS grid item inside a column track that only
+  exists at `sm:` and up, and the label's text span as a flex child of the
+  label). Verified against a real mobile viewport: the disability label
+  went from a 738px-wide row on a 390px viewport to wrapping across three
+  lines inside the card; confirmed desktop is unaffected.
+
 Two more mobile issues found from live screenshots, in the same PR as the
 figure-flex fix below since both came from the same round of user testing:
 
