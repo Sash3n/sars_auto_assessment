@@ -160,7 +160,11 @@ export function composeAssessment(
     }
   }
   if (rental !== 0) {
-    incomeLines.push({ description: "Net rental income", amount: rental });
+    incomeLines.push({
+      code: "4210",
+      description: "Net rental income",
+      amount: rental,
+    });
   }
   if (freelance > 0) {
     incomeLines.push({
@@ -170,6 +174,7 @@ export function composeAssessment(
   }
   if (taxableGain > 0) {
     incomeLines.push({
+      code: "4250",
       description: "Taxable capital gain",
       amount: taxableGain,
     });
@@ -278,6 +283,7 @@ export function composeAssessment(
   );
   if (donationsAllowed > 0) {
     deductionLines.push({
+      code: "4011",
       description: "Section 18A donations",
       amount: -donationsAllowed,
     });

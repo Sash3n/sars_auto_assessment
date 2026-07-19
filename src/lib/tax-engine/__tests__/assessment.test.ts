@@ -137,6 +137,14 @@ describe("composeAssessment, full 2025/26 reference scenario", () => {
   it("flags likely provisional taxpayer status for non-PAYE income", () => {
     expect(assessment.provisionalTaxpayerLikely).toBe(true);
   });
+
+  it("codes the net rental income line as SARS code 4210", () => {
+    const line = assessment.incomeLines.find((entry) =>
+      entry.description.toLowerCase().includes("rental"),
+    );
+    expect(line?.code).toBe("4210");
+    expect(line?.amount).toBe(84_000);
+  });
 });
 
 describe("composeAssessment, refund scenario", () => {
@@ -216,6 +224,26 @@ describe("composeAssessment, edge cases", () => {
     expect(assessment.cgt.taxable).toBe(24_000);
     expect(assessment.incomeTotal).toBe(24_000);
   });
+
+  it("codes the taxable capital gain line as SARS code 4250", () => {
+    const year = emptyYear("2025-26");
+    year.profile.dateOfBirth = "1980-05-01";
+    year.disposals = [
+      {
+        id: "d1",
+        description: "Shares",
+        proceeds: 150_000,
+        baseCost: 50_000,
+        isPrimaryResidence: false,
+      },
+    ];
+    const assessment = composeAssessment(year, y2025);
+    const line = assessment.incomeLines.find((entry) =>
+      entry.description.toLowerCase().includes("capital gain"),
+    );
+    expect(line?.code).toBe("4250");
+    expect(line?.amount).toBe(24_000);
+  });
 });
 
 describe("composeAssessment, travel, home office, and donation certificates", () => {
@@ -264,6 +292,13 @@ describe("composeAssessment, travel, home office, and donation certificates", ()
       entry.description.toLowerCase().includes("donation"),
     );
     expect(line?.amount).toBe(-10_000);
+  });
+
+  it("codes the section 18A donations line as SARS code 4011", () => {
+    const line = assessment.deductionLines.find((entry) =>
+      entry.description.toLowerCase().includes("donation"),
+    );
+    expect(line?.code).toBe("4011");
   });
 
   it("totals the deductions and reduces taxable income accordingly", () => {
