@@ -154,6 +154,21 @@
   min-width: 0;
 }
 
+/*
+ * DaisyUI's card component applies display: flex, flex-direction: row,
+ * align-items: center, justify-content: center to every <figure> on the
+ * page (styling meant for a card's thumbnail image), regardless of where
+ * the figure sits. The chart components (BracketBar, MonthlyBars) use
+ * <figure> for its semantic caption pairing, not a card image, and that
+ * rule silently turned their stacked children into centered, shrink-to-fit
+ * row items, crushing chart labels together on narrow screens. Restored to
+ * normal block flow here rather than patching every figure with override
+ * classes.
+ */
+figure {
+  display: block;
+}
+
 /* Respect the user's motion preference across the whole app. */
 @media (prefers-reduced-motion: reduce) {
   *,
