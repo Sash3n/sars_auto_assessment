@@ -314,6 +314,9 @@ export default function ResultsPage() {
           </section>
 
           <div className="flex flex-wrap justify-end gap-2 print:hidden">
+            <Link href="/statement" className="btn btn-outline">
+              View as statement
+            </Link>
             <button
               type="button"
               className="btn btn-outline"

@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import CurrencyField from "@/components/fields/CurrencyField";
+import { writeComparisonHandoff } from "@/lib/document/handoff";
 import { parseIta34Text, type ParsedIta34 } from "@/lib/extraction/ita34";
 import { formatRand } from "@/lib/format";
 import { useActiveYear } from "@/lib/store/StoreProvider";
@@ -547,6 +549,15 @@ export default function ComparePage() {
           </section>
 
           <div className="flex flex-wrap justify-end gap-2 print:hidden">
+            <Link
+              href="/statement?mode=compare"
+              className="btn btn-outline"
+              onClick={() =>
+                writeComparisonHandoff({ yearLabel: tables.label, rows })
+              }
+            >
+              View as statement
+            </Link>
             <button
               type="button"
               className="btn btn-outline"
