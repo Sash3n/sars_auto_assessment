@@ -223,4 +223,29 @@ figure {
     box-shadow: none !important;
     break-inside: avoid;
   }
+
+  /*
+   * The ITA34-styled statement uses navy and steel-blue background colors
+   * to match the real document. Browsers strip non-white backgrounds from
+   * print output by default, so this scoped rule opts the statement back
+   * in without touching every other printed page.
+   */
+  .ita34-doc,
+  .ita34-doc * {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  .ita34-doc {
+    box-shadow: none !important;
+    border: none !important;
+  }
+  .ita34-doc section,
+  .ita34-doc > div {
+    break-inside: avoid;
+  }
+}
+
+@page {
+  size: A4;
+  margin: 12mm;
 }

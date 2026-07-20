@@ -58,6 +58,21 @@ export const SARS_CODES: readonly SarsCode[] = [
     description: "PAYE credit (employees' tax already withheld)",
     kind: "credit",
   },
+  {
+    code: "4210",
+    description: "Local rental income",
+    kind: "income",
+  },
+  {
+    code: "4250",
+    description: "Local capital gain",
+    kind: "income",
+  },
+  {
+    code: "4011",
+    description: "Donations and/or contributions made (section 18A)",
+    kind: "deduction",
+  },
 ] as const;
 
 const codeIndex = new Map(SARS_CODES.map((entry) => [entry.code, entry]));

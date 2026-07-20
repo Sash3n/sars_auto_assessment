@@ -55,6 +55,8 @@ export interface Assessment {
   netAmount: number;
   /** SARS "Rating percentage": tax over taxable income. */
   effectiveRatePercent: number;
+  /** Gross payroll remuneration, the section 11F percentage base component. */
+  remuneration: number;
   provisionalTaxpayerLikely: boolean;
   retirement: {
     contributions: number;
@@ -160,7 +162,11 @@ export function composeAssessment(
     }
   }
   if (rental !== 0) {
-    incomeLines.push({ description: "Net rental income", amount: rental });
+    incomeLines.push({
+      code: "4210",
+      description: "Net rental income",
+      amount: rental,
+    });
   }
   if (freelance > 0) {
     incomeLines.push({
@@ -170,6 +176,7 @@ export function composeAssessment(
   }
   if (taxableGain > 0) {
     incomeLines.push({
+      code: "4250",
       description: "Taxable capital gain",
       amount: taxableGain,
     });
@@ -278,6 +285,7 @@ export function composeAssessment(
   );
   if (donationsAllowed > 0) {
     deductionLines.push({
+      code: "4011",
       description: "Section 18A donations",
       amount: -donationsAllowed,
     });
@@ -340,6 +348,7 @@ export function composeAssessment(
       taxableIncome > 0
         ? Math.round((assessedTaxAfterRebates / taxableIncome) * 10_000) / 100
         : 0,
+    remuneration: payroll.grossPayrollIncome,
     provisionalTaxpayerLikely: nonPayeIncome > PROVISIONAL_INCOME_THRESHOLD,
     retirement: {
       contributions: retirementContributions,
