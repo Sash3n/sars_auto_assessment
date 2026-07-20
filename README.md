@@ -51,19 +51,51 @@ happen to show, not just the ones a given user currently has.
 
 - **The statement document (`/statement`).** `src/lib/document/statement.ts`
   reshapes an already-computed `Assessment` into the ITA34's own section
-  layout: Balance of Account, Assessment Summary Information, Tax
-  calculation, Income grouped by category (Employment income [IRP5/IT3(a)],
-  Local Interest Income, Local Rental Income, Other Income, Capital Gains,
-  only the categories that have data), Deductions allowed, Taxable income
-  with the SARS rating percentage, and narrative Notes (interest exemption,
-  the section 11F retirement cap, the CGT annual exclusion, plus the
-  assessment's own warnings). No tax is calculated here, only presented, so
-  it stays outside `tax-engine`. `Ita34Document.tsx` renders it with navy
-  section banners, steel-blue column headers, and bordered tables matching
-  the real document's look, independent of the app's own emerald/slate
-  theme (a document should look like paper regardless of light or dark
-  mode), with a persistent "not an official SARS document" banner on screen
-  and in print, not only a print-only header.
+  layout, structured against a real reference ITA34 section by section:
+  a Details block (year of assessment, date generated, type of document),
+  Balance of Account, Assessment Summary Information with the reference's
+  "Calculated Tax Liability:" subheader, Tax calculation, Income grouped by
+  category (Employment income [IRP5/IT3(a)], Local Interest Income, Local
+  Rental Income, Other Income, Capital Gains, only the categories that have
+  data), Deductions allowed, Taxable income with the SARS rating
+  percentage, and numbered Notes. No tax is calculated here, only
+  presented, so it stays outside `tax-engine`. `Ita34Document.tsx` renders
+  it with navy section banners, steel-blue column headers, and bordered
+  tables matching the real document's look, independent of the app's own
+  emerald/slate theme (a document should look like paper regardless of
+  light or dark mode), with a persistent "not an official SARS document"
+  banner on screen and in print, not only a print-only header.
+- **The reference's two amount columns, reproduced faithfully.** Every
+  coded table carries both a "Computations & adjustments" column (component
+  figures) and an "Amount assessed" column (the signed contribution), and
+  rows follow the real document's conventions: employment code lines show
+  the same figure in both columns, local interest (4201) is
+  computations-only with the "Investment exemption" adjustment beneath it
+  and the taxable net on the section header, retirement (4029) shows its
+  contribution build-up ("Amount b/f from previous year", pension/provident
+  versus retirement annuity split) as indented computations-only rows
+  followed by the reference's two blue narrative captions quoting the
+  actual section 11F limits ("Deduction limited to lesser of R350 000 or
+  27,5% of the greater of taxable income or remuneration", with the real
+  figures). Rebates and medical credits nest as children under one
+  "Rebates" umbrella row, and PAYE sits as a 4102 detail line under an
+  "Employees' tax" parent, both exactly as the reference groups them. The
+  gross `remuneration` figure the narrative needs was already computed
+  inside `composeAssessment` and is now exposed on `Assessment`
+  (test-first, per the tax-engine discipline).
+- **Notes are numbered mini-sections, not bullets.** A "Medical Rebates for
+  persons below 65 without a disability" style note (heading worded from
+  the taxpayer's actual age band and disability status) carries the
+  contributions detail and credit amounts as label:value rows, a Capital
+  gains note quotes the year's inclusion rate and annual exclusion, and the
+  assessment's own warnings surface verbatim in a final note.
+- **SARS-only fields are omitted, never faked.** The real ITA34 carries a
+  Reference number, Document number, PRN, Contact Details, Compliance
+  Information, and a marital/communal-estate declaration. This app has no
+  honest equivalent for any of them, so the statement leaves them out
+  entirely rather than printing fabricated identifiers or placeholder
+  values, both to stay truthful and to avoid impersonating a SARS-issued
+  document.
 - **Compare mode.** The Compare page's already-computed comparison rows
   (`ComparisonRow[]`) are handed to the same document as a three-column
   variance layout, Your calculation / SARS assessment / Variance, grouped
@@ -94,16 +126,26 @@ happen to show, not just the ones a given user currently has.
   `print-color-adjust: exact`, and an `@page` rule sets A4 size and margins.
 
 How it is tested: written test-first, `assessment.test.ts` and
-`compare.test.ts` assert the new codes and `groupComparisonRows`'s grouping
-before the implementation existed. `src/lib/document/__tests__/statement.test.ts`
-covers category ordering, the exempt-interest adjustment line's placement,
-a single deductions section, the summary and taxable-income figures, the
-refund versus payable framing, and that empty categories are omitted
-entirely rather than zero-filled. `handoff.test.ts` covers the round trip,
-a missing entry, reading twice without clearing, and a malformed payload.
-`StatementPage.test.tsx` covers the solo layout, the comparison layout with
-a handoff present, and the fallback when `mode=compare` has no handoff to
-read. The full suite, lint, typecheck, and build pass locally.
+`compare.test.ts` assert the new codes, the `remuneration` field, and
+`groupComparisonRows`'s grouping before the implementation existed.
+`src/lib/document/__tests__/statement.test.ts` covers the two-column row
+conventions per section (both-columns employment lines, computations-only
+interest with the exemption adjustment, the retirement build-up rows and
+narrative captions with their real figures), category ordering, the Rebates
+umbrella and its children including the secondary/tertiary rows for an
+older taxpayer, the Details block, the numbered notes, the summary and
+taxable-income figures, the refund versus payable framing, that empty
+categories are omitted entirely rather than zero-filled, and that the
+income section totals always reconcile to the assessment's income total
+(the test that caught 37xx allowance codes falling out of the employment
+grouping). `handoff.test.ts` covers the round trip, a missing entry,
+reading twice without clearing, and a malformed payload.
+`StatementPage.test.tsx` covers the solo layout including the revision's
+structural elements, the comparison layout with a handoff present, and the
+fallback when `mode=compare` has no handoff to read. The rendered page was
+also verified visually against the reference ITA34 in a real browser with
+a seeded scenario reproducing the reference's figures. The full suite,
+lint, typecheck, and build pass locally.
 
 Research links consulted: SARS's source code finder
 (https://www.sars.gov.za/types-of-tax/personal-income-tax/filing-season/find-a-source-code/)
